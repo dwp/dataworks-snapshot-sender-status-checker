@@ -12,32 +12,34 @@ help:
 .PHONY: bootstrap
 bootstrap: ## Bootstrap local environment for first use
 	@make git-hooks
-	pip3 install --user Jinja2 PyYAML boto3
-	@{ \
-		export AWS_PROFILE=$(aws_profile); \
-		export AWS_REGION=$(aws_region); \
-		python3 bootstrap_terraform.py; \
-	}
-	terraform fmt -recursive
 
 .PHONY: git-hooks
 git-hooks: ## Set up hooks in .githooks
 	@git submodule update --init .githooks ; \
-	git config core.hooksPath .githooks \
+	git config core.hooksPath .githooks
 
+setup-local:
+	virtualenv --python=python3.8 venv
+	source venv/bin/activate
+	pip install -r requirements.txt
 
-.PHONY: terraform-init
-terraform-init: ## Run `terraform init` from repo root
-	terraform init
+env-vars: ## Make env vars required by application
+	@{ \
+		export PYTHONPATH=$(shell pwd)/src; \
+		export LOG_LEVEL=DEBUG; \
+		export ENVIRONMENT=LOCAL; \
+		export APPLICATION="status_checker_lambda"; \
+	}
 
-.PHONY: terraform-plan
-terraform-plan: ## Run `terraform plan` from repo root
-	terraform plan
+unittest:
+	tox
 
-.PHONY: terraform-apply
-terraform-apply: ## Run `terraform apply` from repo root
-	terraform apply
+deployable:
+	rm -rf artifacts
+	mkdir artifacts
+	pip install -r requirements.txt -t artifacts
+	cp src/status_checker_lambda/*.py artifacts/
+	cd artifacts && zip -r ../snapshot-sender-status-checker-development.zip ./ && cd -
 
-.PHONY: terraform-workspace-new
-terraform-workspace-new: ## Creates new Terraform workspace with Concourse remote execution. Run `terraform-workspace-new workspace=<workspace_name>`
-	fly -t aws-concourse execute --config create-workspace.yml --input repo=. -v workspace="$(workspace)"
+clean:
+	rm -rf artifacts ./src/snapshot_sender_status_checker.egg-info ./snapshot-sender-status-checker-development.zip
