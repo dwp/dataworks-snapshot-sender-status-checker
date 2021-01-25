@@ -38,14 +38,22 @@ args.log_level = "INFO"
 
 class TestReplayer(unittest.TestCase):
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
-    @mock.patch("status_checker_lambda.status_checker.generate_monitoring_message_payload")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_monitoring_message_payload"
+    )
     @mock.patch("status_checker_lambda.status_checker.check_completion_status")
-    @mock.patch("status_checker_lambda.status_checker.query_dynamodb_for_all_collections")
+    @mock.patch(
+        "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
+    )
     @mock.patch("status_checker_lambda.status_checker.send_sqs_message")
-    @mock.patch("status_checker_lambda.status_checker.generate_export_state_message_payload")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_export_state_message_payload"
+    )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
     @mock.patch("status_checker_lambda.status_checker.is_collection_received")
-    @mock.patch("status_checker_lambda.status_checker.update_files_received_for_collection")
+    @mock.patch(
+        "status_checker_lambda.status_checker.update_files_received_for_collection"
+    )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.setup_logging")
     @mock.patch("status_checker_lambda.status_checker.get_parameters")
@@ -72,9 +80,9 @@ class TestReplayer(unittest.TestCase):
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
         get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock, 
-            "sqs": sqs_client_mock, 
-            "sns": sns_client_mock
+            "dynamodb": dynamodb_client_mock,
+            "sqs": sqs_client_mock,
+            "sns": sns_client_mock,
         }
         get_client_mock.side_effect = get_client_mock_return_values.get
 
@@ -85,7 +93,9 @@ class TestReplayer(unittest.TestCase):
             "FilesReceived": 1,
             "FilesSent": 1,
         }
-        update_files_received_for_collection_mock.return_value = single_collection_result
+        update_files_received_for_collection_mock.return_value = (
+            single_collection_result
+        )
 
         is_collection_received_mock.return_value = True
 
@@ -122,11 +132,11 @@ class TestReplayer(unittest.TestCase):
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
 
-        event = { 
+        event = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
         status_checker.handler(event, None)
@@ -157,14 +167,11 @@ class TestReplayer(unittest.TestCase):
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, 
-            CORRELATION_ID_1,
-            COLLECTION_1,
-            EXPORT_DATE
+            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE
         )
 
         send_sqs_message_mock.assert_called_once_with(
-            sqs_client_mock, 
+            sqs_client_mock,
             expected_payload_sqs,
             SQS_QUEUE_URL,
         )
@@ -181,8 +188,7 @@ class TestReplayer(unittest.TestCase):
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, 
-            "All collections received by NiFi"
+            SNAPSHOT_TYPE, "All collections received by NiFi"
         )
 
         send_sns_message_mock.assert_called_once_with(
@@ -192,14 +198,22 @@ class TestReplayer(unittest.TestCase):
         )
 
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
-    @mock.patch("status_checker_lambda.status_checker.generate_monitoring_message_payload")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_monitoring_message_payload"
+    )
     @mock.patch("status_checker_lambda.status_checker.check_completion_status")
-    @mock.patch("status_checker_lambda.status_checker.query_dynamodb_for_all_collections")
+    @mock.patch(
+        "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
+    )
     @mock.patch("status_checker_lambda.status_checker.send_sqs_message")
-    @mock.patch("status_checker_lambda.status_checker.generate_export_state_message_payload")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_export_state_message_payload"
+    )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
     @mock.patch("status_checker_lambda.status_checker.is_collection_received")
-    @mock.patch("status_checker_lambda.status_checker.update_files_received_for_collection")
+    @mock.patch(
+        "status_checker_lambda.status_checker.update_files_received_for_collection"
+    )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.setup_logging")
     @mock.patch("status_checker_lambda.status_checker.get_parameters")
@@ -226,9 +240,9 @@ class TestReplayer(unittest.TestCase):
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
         get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock, 
-            "sqs": sqs_client_mock, 
-            "sns": sns_client_mock
+            "dynamodb": dynamodb_client_mock,
+            "sqs": sqs_client_mock,
+            "sns": sns_client_mock,
         }
         get_client_mock.side_effect = get_client_mock_return_values.get
 
@@ -239,7 +253,9 @@ class TestReplayer(unittest.TestCase):
             "FilesReceived": 1,
             "FilesSent": 1,
         }
-        update_files_received_for_collection_mock.return_value = single_collection_result
+        update_files_received_for_collection_mock.return_value = (
+            single_collection_result
+        )
 
         is_collection_received_mock.return_value = True
 
@@ -268,11 +284,11 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.return_value = False
 
-        event = { 
+        event = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
         status_checker.handler(event, None)
@@ -303,14 +319,11 @@ class TestReplayer(unittest.TestCase):
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, 
-            CORRELATION_ID_1,
-            COLLECTION_1,
-            EXPORT_DATE
+            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE
         )
 
         send_sqs_message_mock.assert_called_once_with(
-            sqs_client_mock, 
+            sqs_client_mock,
             expected_payload_sqs,
             SQS_QUEUE_URL,
         )
@@ -328,16 +341,24 @@ class TestReplayer(unittest.TestCase):
 
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
-        
+
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
-    @mock.patch("status_checker_lambda.status_checker.generate_monitoring_message_payload")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_monitoring_message_payload"
+    )
     @mock.patch("status_checker_lambda.status_checker.check_completion_status")
-    @mock.patch("status_checker_lambda.status_checker.query_dynamodb_for_all_collections")
+    @mock.patch(
+        "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
+    )
     @mock.patch("status_checker_lambda.status_checker.send_sqs_message")
-    @mock.patch("status_checker_lambda.status_checker.generate_export_state_message_payload")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_export_state_message_payload"
+    )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
     @mock.patch("status_checker_lambda.status_checker.is_collection_received")
-    @mock.patch("status_checker_lambda.status_checker.update_files_received_for_collection")
+    @mock.patch(
+        "status_checker_lambda.status_checker.update_files_received_for_collection"
+    )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.setup_logging")
     @mock.patch("status_checker_lambda.status_checker.get_parameters")
@@ -364,9 +385,9 @@ class TestReplayer(unittest.TestCase):
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
         get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock, 
-            "sqs": sqs_client_mock, 
-            "sns": sns_client_mock
+            "dynamodb": dynamodb_client_mock,
+            "sqs": sqs_client_mock,
+            "sns": sns_client_mock,
         }
         get_client_mock.side_effect = get_client_mock_return_values.get
 
@@ -377,15 +398,17 @@ class TestReplayer(unittest.TestCase):
             "FilesReceived": 1,
             "FilesSent": 1,
         }
-        update_files_received_for_collection_mock.return_value = single_collection_result
+        update_files_received_for_collection_mock.return_value = (
+            single_collection_result
+        )
 
         is_collection_received_mock.return_value = False
 
-        event = { 
+        event = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
         status_checker.handler(event, None)
@@ -414,7 +437,6 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_not_called()
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
-
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_sqs_payload_generates_valid_payload(self, mock_logger):
@@ -712,11 +734,11 @@ class TestReplayer(unittest.TestCase):
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME, 
-            Key={'CorrelationId': CORRELATION_ID_1, 'CollectionName': COLLECTION_1}, 
-            UpdateExpression='SET CollectionStatus = :val', 
-            ExpressionAttributeValues={':val': {'S': SENT_STATUS}}, 
-            ReturnValues='ALL_NEW'
+            TableName=DDB_TABLE_NAME,
+            Key={"CorrelationId": CORRELATION_ID_1, "CollectionName": COLLECTION_1},
+            UpdateExpression="SET CollectionStatus = :val",
+            ExpressionAttributeValues={":val": {"S": SENT_STATUS}},
+            ReturnValues="ALL_NEW",
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -732,11 +754,11 @@ class TestReplayer(unittest.TestCase):
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME, 
-            Key={'CorrelationId': CORRELATION_ID_1, 'CollectionName': COLLECTION_1}, 
-            UpdateExpression='SET FilesReceived = FilesReceived + :val', 
-            ExpressionAttributeValues={':val': {'N': "1"}}, 
-            ReturnValues='ALL_NEW'
+            TableName=DDB_TABLE_NAME,
+            Key={"CorrelationId": CORRELATION_ID_1, "CollectionName": COLLECTION_1},
+            UpdateExpression="SET FilesReceived = FilesReceived + :val",
+            ExpressionAttributeValues={":val": {"N": "1"}},
+            ReturnValues="ALL_NEW",
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -752,8 +774,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         dynamodb_mock.get_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME, 
-            Key={'CorrelationId': CORRELATION_ID_1, 'CollectionName': COLLECTION_1}, 
+            TableName=DDB_TABLE_NAME,
+            Key={"CorrelationId": CORRELATION_ID_1, "CollectionName": COLLECTION_1},
             ConsistentRead=True,
         )
 
@@ -772,10 +794,8 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock.query.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
             KeyConditionExpression=f"{CORRELATION_ID_DDB_FIELD_NAME} = :c",
-            ExpressionAttributeValues={
-                ':c': {'S': CORRELATION_ID_1}
-            },
-            ConsistentRead=True
+            ExpressionAttributeValues={":c": {"S": CORRELATION_ID_1}},
+            ConsistentRead=True,
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -786,15 +806,12 @@ class TestReplayer(unittest.TestCase):
         sqs_mock = mock.MagicMock()
         sqs_mock.send_message = mock.MagicMock()
 
-        payload = { "test_key": "test_value" }
+        payload = {"test_key": "test_value"}
 
-        status_checker.send_sqs_message(
-            sqs_mock, payload, SQS_QUEUE_URL
-        )
+        status_checker.send_sqs_message(sqs_mock, payload, SQS_QUEUE_URL)
 
         sqs_mock.send_message.assert_called_once_with(
-            QueueUrl=SQS_QUEUE_URL, 
-            MessageBody='{"test_key": "test_value"}'
+            QueueUrl=SQS_QUEUE_URL, MessageBody='{"test_key": "test_value"}'
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -805,16 +822,14 @@ class TestReplayer(unittest.TestCase):
         sns_mock = mock.MagicMock()
         sns_mock.publish = mock.MagicMock()
 
-        payload = { "test_key": "test_value" }
+        payload = {"test_key": "test_value"}
 
-        status_checker.send_sns_message(
-            sns_mock, payload, SNS_TOPIC_ARN
-        )
+        status_checker.send_sns_message(sns_mock, payload, SNS_TOPIC_ARN)
 
         sns_mock.publish.assert_called_once_with(
-            TopicArn=SNS_TOPIC_ARN, 
-            Message='{"test_key": "test_value"}'
+            TopicArn=SNS_TOPIC_ARN, Message='{"test_key": "test_value"}'
         )
+
 
 if __name__ == "__main__":
     unittest.main()

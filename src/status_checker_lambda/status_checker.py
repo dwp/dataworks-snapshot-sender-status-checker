@@ -231,10 +231,8 @@ def query_dynamodb_for_all_collections(
     response = dynamodb_client.query(
         TableName=ddb_status_table,
         KeyConditionExpression=f"{CORRELATION_ID_DDB_FIELD_NAME} = :c",
-        ExpressionAttributeValues={
-            ':c': {'S': correlation_id}
-        },
-        ConsistentRead=True
+        ExpressionAttributeValues={":c": {"S": correlation_id}},
+        ConsistentRead=True,
     )
     records = response["Items"]
     logger.info(
