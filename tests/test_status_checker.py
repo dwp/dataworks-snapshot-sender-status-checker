@@ -1025,7 +1025,9 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
     ):
         event = {
-            "Records": [{"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})}]
+            "Records": [
+                {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})}
+            ]
         }
         expected = {"Test1": "test_value1", "Test2": "test_value2"}
 
