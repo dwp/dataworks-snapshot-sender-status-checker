@@ -469,16 +469,14 @@ def handler(event, context):
     global args
     global logger
 
+    args = get_parameters()
+    logger = setup_logging(args.log_level)
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Processing new event", "event": "{dumped_event}"')
 
     dynamodb_client = get_client("dynamodb")
     sns_client = get_client("sns")
     sqs_client = get_client("sqs")
-
-    args = get_parameters()
-    logger = setup_logging(args.log_level)
-    logger.info(f"Event: {json.dumps(event)}")
 
     check_for_mandatory_keys(event)
 
