@@ -3,6 +3,7 @@
 import unittest
 import pytest
 import argparse
+import json
 
 from copy import deepcopy
 from unittest import mock
@@ -1011,6 +1012,20 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "Records": [{"body": {"Test1": "test_value1", "Test2": "test_value2"}}]
+        }
+        expected = {"Test1": "test_value1", "Test2": "test_value2"}
+
+        actual = status_checker.extract_body(event)
+
+        self.assertEqual(expected, actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_extract_body_correctly_extracts_when_body_is_escaped_json(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "Records": [{"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})}]
         }
         expected = {"Test1": "test_value1", "Test2": "test_value2"}
 
