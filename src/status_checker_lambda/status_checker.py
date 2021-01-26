@@ -482,13 +482,19 @@ def extract_messages(event):
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
                 logger.info(f'Extracted a message from event, "body": "{dumped_body}')
-                messages_to_process.append(body if type(body) is dict else json.loads(body))
+                messages_to_process.append(
+                    body if type(body) is dict else json.loads(body)
+                )
 
     if len(messages_to_process) == 0:
-        logger.info('No messages could be extracted so attempting to process event as one message')
+        logger.info(
+            "No messages could be extracted so attempting to process event as one message"
+        )
         messages_to_process.append(event)
 
-    logger.info(f'Extracted all messages from event, "message_count": "{len(messages_to_process)}')
+    logger.info(
+        f'Extracted all messages from event, "message_count": "{len(messages_to_process)}'
+    )
     return messages_to_process
 
 
@@ -513,7 +519,9 @@ def process_message(message, dynamodb_client, sqs_client, sns_client):
     export_date = message[EXPORT_DATE_FIELD_NAME]
 
     shutdown_flag = (
-        message[SHUTDOWN_FLAG_FIELD_NAME] if SHUTDOWN_FLAG_FIELD_NAME in message else "true"
+        message[SHUTDOWN_FLAG_FIELD_NAME]
+        if SHUTDOWN_FLAG_FIELD_NAME in message
+        else "true"
     )
     reprocess_files = (
         message[REPROCESS_FILES_FIELD_NAME]

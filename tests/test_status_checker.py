@@ -69,7 +69,7 @@ class TestReplayer(unittest.TestCase):
 
         extract_messages_mock.return_value = [
             {"test1": "test_value1"},
-            {"test2": "test_value2"}
+            {"test2": "test_value2"},
         ]
 
         event = {
@@ -196,7 +196,7 @@ class TestReplayer(unittest.TestCase):
         status_checker.process_message(
             message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
         )
-        
+
         check_for_mandatory_keys_mock.assert_called_once()
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -332,7 +332,7 @@ class TestReplayer(unittest.TestCase):
         status_checker.process_message(
             message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
         )
-        
+
         check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -463,7 +463,7 @@ class TestReplayer(unittest.TestCase):
         status_checker.process_message(
             message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
         )
-        
+
         check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -1071,9 +1071,7 @@ class TestReplayer(unittest.TestCase):
         event = {
             "Records": [{"body": {"Test1": "test_value1", "Test2": "test_value2"}}]
         }
-        expected = [
-            {"Test1": "test_value1", "Test2": "test_value2"}
-        ]
+        expected = [{"Test1": "test_value1", "Test2": "test_value2"}]
 
         actual = status_checker.extract_messages(event)
 
@@ -1086,13 +1084,13 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "Records": [
-                    {"body": {"Test1": "test_value1", "Test2": "test_value2"}},
-                    {"body": {"Test3": "test_value3", "Test4": "test_value4"}}
-                ]
+                {"body": {"Test1": "test_value1", "Test2": "test_value2"}},
+                {"body": {"Test3": "test_value3", "Test4": "test_value4"}},
+            ]
         }
         expected = [
             {"Test1": "test_value1", "Test2": "test_value2"},
-            {"Test3": "test_value3", "Test4": "test_value4"}
+            {"Test3": "test_value3", "Test4": "test_value4"},
         ]
 
         actual = status_checker.extract_messages(event)
@@ -1109,9 +1107,7 @@ class TestReplayer(unittest.TestCase):
                 {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})}
             ]
         }
-        expected = [
-            {"Test1": "test_value1", "Test2": "test_value2"}
-        ]
+        expected = [{"Test1": "test_value1", "Test2": "test_value2"}]
 
         actual = status_checker.extract_messages(event)
 
@@ -1125,12 +1121,12 @@ class TestReplayer(unittest.TestCase):
         event = {
             "Records": [
                 {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})},
-                {"body": json.dumps({"Test3": "test_value3", "Test4": "test_value4"})}
+                {"body": json.dumps({"Test3": "test_value3", "Test4": "test_value4"})},
             ]
         }
         expected = [
             {"Test1": "test_value1", "Test2": "test_value2"},
-            {"Test3": "test_value3", "Test4": "test_value4"}
+            {"Test3": "test_value3", "Test4": "test_value4"},
         ]
 
         actual = status_checker.extract_messages(event)
