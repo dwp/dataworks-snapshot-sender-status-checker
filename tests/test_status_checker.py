@@ -1009,7 +1009,9 @@ class TestReplayer(unittest.TestCase):
         self,
         mock_logger,
     ):
-        event = {"Records": [{"body": {"Test1": "test_value1", "Test2": "test_value2"}}]}
+        event = {
+            "Records": [{"body": {"Test1": "test_value1", "Test2": "test_value2"}}]
+        }
         expected = {"Test1": "test_value1", "Test2": "test_value2"}
 
         actual = status_checker.extract_body(event)

@@ -471,7 +471,7 @@ def extract_body(event):
     Arguments:
         event (dict): The incoming event
     """
-    logger.info('Extracting body from event')
+    logger.info("Extracting body from event")
 
     if "Records" in event:
         records = event["Records"]
