@@ -465,32 +465,56 @@ def get_client(service):
     return boto3.client(service)
 
 
+def extract_body(event):
+    """Extracts the body for the event.
+
+    Arguments:
+        event (dict): The incoming event
+    """
+    logger.info("Extracting body from event")
+
+    if "Records" in event:
+        records = event["Records"]
+        if len(records) > 0:
+            record = records[0]
+            if "body" in record:
+                body = record["body"]
+                dumped_body = get_escaped_json_string(body)
+                logger.info(f'Extracted body from event, "body": "{dumped_body}')
+                return body
+
+    return event
+
+
 def handler(event, context):
     global args
     global logger
 
     args = get_parameters()
     logger = setup_logging(args.log_level)
+
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Processing new event", "event": "{dumped_event}"')
+
+    body = extract_body(event)
 
     dynamodb_client = get_client("dynamodb")
     sns_client = get_client("sns")
     sqs_client = get_client("sqs")
 
-    check_for_mandatory_keys(event)
+    check_for_mandatory_keys(body)
 
-    collection_name = event[COLLECTION_NAME_FIELD_NAME]
-    correlation_id = event[CORRELATION_ID_FIELD_NAME]
-    snapshot_type = event[SNAPSHOT_TYPE_FIELD_NAME]
-    export_date = event[EXPORT_DATE_FIELD_NAME]
+    collection_name = body[COLLECTION_NAME_FIELD_NAME]
+    correlation_id = body[CORRELATION_ID_FIELD_NAME]
+    snapshot_type = body[SNAPSHOT_TYPE_FIELD_NAME]
+    export_date = body[EXPORT_DATE_FIELD_NAME]
 
     shutdown_flag = (
-        event[SHUTDOWN_FLAG_FIELD_NAME] if SHUTDOWN_FLAG_FIELD_NAME in event else "true"
+        body[SHUTDOWN_FLAG_FIELD_NAME] if SHUTDOWN_FLAG_FIELD_NAME in body else "true"
     )
     reprocess_files = (
-        event[REPROCESS_FILES_FIELD_NAME]
-        if REPROCESS_FILES_FIELD_NAME in event
+        body[REPROCESS_FILES_FIELD_NAME]
+        if REPROCESS_FILES_FIELD_NAME in body
         else "true"
     )
 
