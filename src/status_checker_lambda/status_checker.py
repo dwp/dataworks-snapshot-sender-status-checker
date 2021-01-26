@@ -10,6 +10,7 @@ CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
 SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
 EXPORT_DATE_FIELD_NAME = "export_date"
+ATTRIBUTES_FIELD_NAME = "Attributes"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
 COLLECTION_STATUS_DDB_FIELD_NAME = "CollectionStatus"
@@ -17,7 +18,7 @@ FILES_RECEIVED_DDB_FIELD_NAME = "FilesReceived"
 FILES_SENT_DDB_FIELD_NAME = "FilesSent"
 
 SENT_STATUS_VALUE = "Sent"
-RECEIVED_STATUS_VALUE = "Received"
+SUCCESS_STATUS_VALUE = "Success"
 
 log_level = os.environ["LOG_LEVEL"] if "LOG_LEVEL" in os.environ else "INFO"
 required_message_keys = [
@@ -200,8 +201,8 @@ def check_completion_status(response_items, statuses):
     """
     is_completed = True
     for item in response_items:
-        collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]
-        collection_name = item[COLLECTION_NAME_DDB_FIELD_NAME]
+        collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
+        collection_name = item[COLLECTION_NAME_DDB_FIELD_NAME]["S"]
         logger.info(
             "collection_status of collection %s is %s",
             collection_name,
@@ -261,8 +262,8 @@ def get_single_collection_from_dynamodb(
     response = dynamodb_client.get_item(
         TableName=ddb_status_table,
         Key={
-            CORRELATION_ID_DDB_FIELD_NAME: correlation_id,
-            COLLECTION_NAME_DDB_FIELD_NAME: collection_name,
+            CORRELATION_ID_DDB_FIELD_NAME: {'S': correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {'S': collection_name},
         },
         ConsistentRead=True,
     )
@@ -290,14 +291,14 @@ def update_files_received_for_collection(
     response = dynamodb_client.update_item(
         TableName=ddb_status_table,
         Key={
-            CORRELATION_ID_DDB_FIELD_NAME: correlation_id,
-            COLLECTION_NAME_DDB_FIELD_NAME: collection_name,
+            CORRELATION_ID_DDB_FIELD_NAME: {'S': correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {'S': collection_name},
         },
         UpdateExpression=f"SET {FILES_RECEIVED_DDB_FIELD_NAME} = {FILES_RECEIVED_DDB_FIELD_NAME} + :val",
         ExpressionAttributeValues={":val": {"N": "1"}},
         ReturnValues="ALL_NEW",
     )
-    return response
+    return response[ATTRIBUTES_FIELD_NAME]
 
 
 def update_status_for_collection(
@@ -327,14 +328,14 @@ def update_status_for_collection(
     response = dynamodb_client.update_item(
         TableName=ddb_status_table,
         Key={
-            CORRELATION_ID_DDB_FIELD_NAME: correlation_id,
-            COLLECTION_NAME_DDB_FIELD_NAME: collection_name,
+            CORRELATION_ID_DDB_FIELD_NAME: {'S': correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {'S': collection_name},
         },
         UpdateExpression=f"SET {COLLECTION_STATUS_DDB_FIELD_NAME} = :val",
         ExpressionAttributeValues={":val": {"S": collection_status}},
         ReturnValues="ALL_NEW",
     )
-    return response
+    return response[ATTRIBUTES_FIELD_NAME]
 
 
 def check_for_mandatory_keys(event):
@@ -361,8 +362,8 @@ def is_collection_received(item):
         item (dict): The item returned from dynamo db
     """
     return (
-        item[COLLECTION_NAME_DDB_FIELD_NAME] == SENT_STATUS_VALUE
-        and item[FILES_RECEIVED_DDB_FIELD_NAME] == item[FILES_SENT_DDB_FIELD_NAME]
+        item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"] == SENT_STATUS_VALUE
+        and item[FILES_RECEIVED_DDB_FIELD_NAME]["N"] == item[FILES_SENT_DDB_FIELD_NAME]["N"]
     )
 
 
@@ -407,7 +408,7 @@ def handler(event, context):
             args.dynamo_db_export_status_table_name,
             correlation_id,
             collection_name,
-            RECEIVED_STATUS_VALUE,
+            SUCCESS_STATUS_VALUE,
         )
 
         sqs_payload = generate_export_state_message_payload(
@@ -418,7 +419,7 @@ def handler(event, context):
         all_statuses = query_dynamodb_for_all_collections(
             dynamodb_client, args.dynamo_db_export_status_table_name, correlation_id
         )
-        if check_completion_status(all_statuses, [RECEIVED_STATUS_VALUE]):
+        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE]):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type, "All collections received by NiFi"
             )
