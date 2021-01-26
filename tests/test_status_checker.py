@@ -11,7 +11,7 @@ from status_checker_lambda import status_checker
 EXPORTING_STATUS = "Exporting"
 EXPORTED_STATUS = "Exported"
 SENT_STATUS = "Sent"
-RECEIVED_STATUS = "Received"
+SUCCESS_STATUS = "Success"
 COLLECTION_1 = "collection1"
 COLLECTION_2 = "collection2"
 CORRELATION_ID_1 = "correlationId1"
@@ -163,7 +163,7 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
-            RECEIVED_STATUS,
+            SUCCESS_STATUS,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
@@ -184,7 +184,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [RECEIVED_STATUS],
+            [SUCCESS_STATUS],
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
@@ -315,7 +315,7 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
-            RECEIVED_STATUS,
+            SUCCESS_STATUS,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
@@ -336,7 +336,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [RECEIVED_STATUS],
+            [SUCCESS_STATUS],
         )
 
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -474,8 +474,8 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTED_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTED_STATUS},
             }
         ]
         actual = status_checker.check_completion_status(
@@ -491,12 +491,12 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTED_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTED_STATUS},
             },
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_2,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTED_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_2},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTED_STATUS},
             },
         ]
         actual = status_checker.check_completion_status(
@@ -512,8 +512,8 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTED_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTED_STATUS},
             }
         ]
         actual = status_checker.check_completion_status(
@@ -529,12 +529,12 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTED_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTED_STATUS},
             },
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_2,
-                COLLECTION_STATUS_DDB_FIELD_NAME: SENT_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_2},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": SENT_STATUS},
             },
         ]
         actual = status_checker.check_completion_status(
@@ -550,8 +550,8 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             }
         ]
         actual = status_checker.check_completion_status(response_items, [SENT_STATUS])
@@ -565,12 +565,12 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             },
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_2,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_2},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             },
         ]
         actual = status_checker.check_completion_status(response_items, [SENT_STATUS])
@@ -584,8 +584,8 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             }
         ]
         actual = status_checker.check_completion_status(
@@ -601,12 +601,12 @@ class TestReplayer(unittest.TestCase):
     ):
         response_items = [
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_1},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             },
             {
-                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_2,
-                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+                COLLECTION_NAME_DDB_FIELD_NAME: {"S": COLLECTION_2},
+                COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             },
         ]
         actual = status_checker.check_completion_status(
@@ -651,9 +651,9 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
     ):
         event = {
-            "CollectionName": SENT_STATUS,
-            "FilesReceived": 1,
-            "FilesSent": 1,
+            "CollectionStatus": {"S": SENT_STATUS},
+            "FilesReceived": {"N": 1},
+            "FilesSent": {"N": 1},
         }
 
         actual = status_checker.is_collection_received(event)
@@ -666,9 +666,9 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
     ):
         event = {
-            "CollectionName": SENT_STATUS,
-            "FilesReceived": 1,
-            "FilesSent": 2,
+            "CollectionStatus": {"S": SENT_STATUS},
+            "FilesReceived": {"N": 1},
+            "FilesSent": {"N": 2},
         }
 
         actual = status_checker.is_collection_received(event)
@@ -681,9 +681,9 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
     ):
         event = {
-            "CollectionName": SENT_STATUS,
-            "FilesReceived": 2,
-            "FilesSent": 1,
+            "CollectionStatus": {"S": SENT_STATUS},
+            "FilesReceived": {"N": 2},
+            "FilesSent": {"N": 1},
         }
 
         actual = status_checker.is_collection_received(event)
@@ -696,9 +696,9 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
     ):
         event = {
-            "CollectionName": EXPORTED_STATUS,
-            "FilesReceived": 1,
-            "FilesSent": 1,
+            "CollectionStatus": {"S": EXPORTED_STATUS},
+            "FilesReceived": {"N": 1},
+            "FilesSent": {"N": 1},
         }
 
         actual = status_checker.is_collection_received(event)
@@ -712,7 +712,7 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
     ):
         event = {
-            "CollectionName": EXPORTED_STATUS,
+            "CollectionStatus": {"S": EXPORTED_STATUS},
             "FilesReceived": 1,
             "FilesSent": 1,
         }
@@ -735,7 +735,10 @@ class TestReplayer(unittest.TestCase):
 
         dynamodb_mock.update_item.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
-            Key={"CorrelationId": CORRELATION_ID_1, "CollectionName": COLLECTION_1},
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
             UpdateExpression="SET CollectionStatus = :val",
             ExpressionAttributeValues={":val": {"S": SENT_STATUS}},
             ReturnValues="ALL_NEW",
@@ -755,7 +758,10 @@ class TestReplayer(unittest.TestCase):
 
         dynamodb_mock.update_item.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
-            Key={"CorrelationId": CORRELATION_ID_1, "CollectionName": COLLECTION_1},
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
             UpdateExpression="SET FilesReceived = FilesReceived + :val",
             ExpressionAttributeValues={":val": {"N": "1"}},
             ReturnValues="ALL_NEW",
@@ -775,7 +781,10 @@ class TestReplayer(unittest.TestCase):
 
         dynamodb_mock.get_item.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
-            Key={"CorrelationId": CORRELATION_ID_1, "CollectionName": COLLECTION_1},
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
             ConsistentRead=True,
         )
 
