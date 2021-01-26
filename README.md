@@ -30,11 +30,18 @@ The following is an example SQS message to receive:
     "correlation_id": "correlation_id_1",
     "collection_name": "db.database.collection",
     "snapshot_type": "incremental",
-    "file_name": "folder1/folder2/file.enc.gz"
+    "export_date": "2020-01-01",
+    "shutdown_flag": "true", # Defaults to true if not present
+    "reprocess_files": "true", # Defaults to true if not present
 }
 ```
 
-All the fields here are required.
+Required fields are:
+
+* `correlation_id`
+* `collection_name`
+* `snapshot_type`
+* `export_date`
 
 ## Environment variables
 

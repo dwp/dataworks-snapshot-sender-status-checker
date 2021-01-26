@@ -2,6 +2,7 @@
     "correlation_id": "test_1",
     "collection_name": "db.test.collection",
     "snapshot_type": "incremental",
-    "file_name": "folder1/folder2/file.enc.gz",
-    "export_date": "2020-01-22"
+    "export_date": "2020-01-22",
+    "shutdown_flag": "true",
+    "reprocess_files": "true"
 }

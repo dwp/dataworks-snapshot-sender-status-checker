@@ -10,6 +10,8 @@ CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
 SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
 EXPORT_DATE_FIELD_NAME = "export_date"
+SHUTDOWN_FLAG_FIELD_NAME = "shutdown_flag"
+REPROCESS_FILES_FIELD_NAME = "reprocess_files"
 ATTRIBUTES_FIELD_NAME = "Attributes"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
@@ -154,7 +156,12 @@ def generate_monitoring_message_payload(snapshot_type, status):
 
 
 def generate_export_state_message_payload(
-    snapshot_type, correlation_id, collection_name, export_date
+    snapshot_type,
+    correlation_id,
+    collection_name,
+    export_date,
+    shutdown_flag,
+    reprocess_files,
 ):
     """Generates a payload for a monitoring message.
 
@@ -163,14 +170,16 @@ def generate_export_state_message_payload(
         correlation_id (string): the correlation id for this snapshot sender run
         collection_name (string): the collection name that has been received
         export_date (string): the date of the export
+        shutdown_flag (string): whether to reprocess the files on NiFi if they exist
+        reprocess_files (string): whether to reprocess the files on NiFi if they exist
 
     """
     payload = {
-        "shutdown_flag": "true",
+        "shutdown_flag": shutdown_flag,
         "correlation_id": correlation_id,
         "topic_name": collection_name,
         "snapshot_type": snapshot_type,
-        "reprocess_files": "true",
+        "reprocess_files": reprocess_files,
         "export_date": export_date,
         "send_success_indicator": "true",
     }
@@ -478,6 +487,17 @@ def handler(event, context):
     snapshot_type = event[SNAPSHOT_TYPE_FIELD_NAME]
     export_date = event[EXPORT_DATE_FIELD_NAME]
 
+    shutdown_flag = (
+        event[SHUTDOWN_FLAG_FIELD_NAME]
+        if SHUTDOWN_FLAG_FIELD_NAME in event
+        else "true"
+    )
+    reprocess_files = (
+        event[REPROCESS_FILES_FIELD_NAME]
+        if REPROCESS_FILES_FIELD_NAME in event
+        else "true"
+    )
+
     updated_item = update_files_received_for_collection(
         dynamodb_client,
         args.dynamo_db_export_status_table_name,
@@ -495,7 +515,7 @@ def handler(event, context):
         )
 
         sqs_payload = generate_export_state_message_payload(
-            snapshot_type, correlation_id, collection_name, export_date
+            snapshot_type, correlation_id, collection_name, export_date, shutdown_flag, reprocess_files
         )
         send_sqs_message(sqs_client, sqs_payload, args.export_state_sqs_queue_url)
 
