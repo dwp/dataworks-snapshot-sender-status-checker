@@ -488,9 +488,7 @@ def handler(event, context):
     export_date = event[EXPORT_DATE_FIELD_NAME]
 
     shutdown_flag = (
-        event[SHUTDOWN_FLAG_FIELD_NAME]
-        if SHUTDOWN_FLAG_FIELD_NAME in event
-        else "true"
+        event[SHUTDOWN_FLAG_FIELD_NAME] if SHUTDOWN_FLAG_FIELD_NAME in event else "true"
     )
     reprocess_files = (
         event[REPROCESS_FILES_FIELD_NAME]
@@ -515,7 +513,12 @@ def handler(event, context):
         )
 
         sqs_payload = generate_export_state_message_payload(
-            snapshot_type, correlation_id, collection_name, export_date, shutdown_flag, reprocess_files
+            snapshot_type,
+            correlation_id,
+            collection_name,
+            export_date,
+            shutdown_flag,
+            reprocess_files,
         )
         send_sqs_message(sqs_client, sqs_payload, args.export_state_sqs_queue_url)
 
