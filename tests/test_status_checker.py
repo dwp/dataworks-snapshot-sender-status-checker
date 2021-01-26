@@ -40,6 +40,69 @@ args.log_level = "INFO"
 
 
 class TestReplayer(unittest.TestCase):
+    @mock.patch("status_checker_lambda.status_checker.process_message")
+    @mock.patch("status_checker_lambda.status_checker.extract_messages")
+    @mock.patch("status_checker_lambda.status_checker.setup_logging")
+    @mock.patch("status_checker_lambda.status_checker.get_parameters")
+    @mock.patch("status_checker_lambda.status_checker.get_client")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_handler_gets_clients_and_processes_all_messages(
+        self,
+        mock_logger,
+        get_client_mock,
+        get_parameters_mock,
+        setup_logging_mock,
+        extract_messages_mock,
+        process_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+        get_client_mock_return_values = {
+            "dynamodb": dynamodb_client_mock,
+            "sqs": sqs_client_mock,
+            "sns": sns_client_mock,
+        }
+        get_client_mock.side_effect = get_client_mock_return_values.get
+
+        get_parameters_mock.return_value = args
+
+        extract_messages_mock.return_value = [
+            {"test1": "test_value1"},
+            {"test2": "test_value2"}
+        ]
+
+        event = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+        }
+
+        status_checker.handler(event, None)
+
+        get_client_mock.assert_any_call("dynamodb")
+        get_client_mock.assert_any_call("sqs")
+        get_client_mock.assert_any_call("sns")
+
+        get_parameters_mock.assert_called_once()
+        setup_logging_mock.assert_called_once()
+        extract_messages_mock.assert_called_once()
+
+        self.assertEqual(process_message_mock.call_count, 2)
+        process_message_mock.assert_any_call(
+            {"test1": "test_value1"},
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+        )
+        process_message_mock.assert_any_call(
+            {"test2": "test_value2"},
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+        )
+
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -58,16 +121,10 @@ class TestReplayer(unittest.TestCase):
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
-    @mock.patch("status_checker_lambda.status_checker.setup_logging")
-    @mock.patch("status_checker_lambda.status_checker.get_parameters")
-    @mock.patch("status_checker_lambda.status_checker.get_client")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handler_when_all_collections_have_been_received(
+    def test_process_message_when_all_collections_have_been_received(
         self,
         mock_logger,
-        get_client_mock,
-        get_parameters_mock,
-        setup_logging_mock,
         check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
@@ -82,14 +139,6 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-        get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock,
-            "sqs": sqs_client_mock,
-            "sns": sns_client_mock,
-        }
-        get_client_mock.side_effect = get_client_mock_return_values.get
-
-        get_parameters_mock.return_value = args
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -99,6 +148,8 @@ class TestReplayer(unittest.TestCase):
         update_files_received_for_collection_mock.return_value = (
             single_collection_result
         )
+
+        check_for_mandatory_keys_mock.return_value = True
 
         is_collection_received_mock.return_value = True
 
@@ -135,21 +186,17 @@ class TestReplayer(unittest.TestCase):
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
 
-        event = {
+        message = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
-        status_checker.handler(event, None)
-
-        get_client_mock.assert_any_call("dynamodb")
-        get_client_mock.assert_any_call("sqs")
-        get_client_mock.assert_any_call("sns")
-
-        get_parameters_mock.assert_called_once()
-        setup_logging_mock.assert_called_once()
+        status_checker.process_message(
+            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        )
+        
         check_for_mandatory_keys_mock.assert_called_once()
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -218,16 +265,10 @@ class TestReplayer(unittest.TestCase):
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
-    @mock.patch("status_checker_lambda.status_checker.setup_logging")
-    @mock.patch("status_checker_lambda.status_checker.get_parameters")
-    @mock.patch("status_checker_lambda.status_checker.get_client")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handler_when_current_collection_has_been_received_but_others_have_not(
+    def test_process_message_when_current_collection_has_been_received_but_others_have_not(
         self,
         mock_logger,
-        get_client_mock,
-        get_parameters_mock,
-        setup_logging_mock,
         check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
@@ -242,14 +283,8 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-        get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock,
-            "sqs": sqs_client_mock,
-            "sns": sns_client_mock,
-        }
-        get_client_mock.side_effect = get_client_mock_return_values.get
 
-        get_parameters_mock.return_value = args
+        check_for_mandatory_keys_mock.return_value = True
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -287,22 +322,18 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.return_value = False
 
-        event = {
+        message = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
-        status_checker.handler(event, None)
-
-        get_client_mock.assert_any_call("dynamodb")
-        get_client_mock.assert_any_call("sqs")
-        get_client_mock.assert_any_call("sns")
-
-        get_parameters_mock.assert_called_once()
-        setup_logging_mock.assert_called_once()
-        check_for_mandatory_keys_mock.assert_called_once()
+        status_checker.process_message(
+            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        )
+        
+        check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -363,16 +394,10 @@ class TestReplayer(unittest.TestCase):
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
-    @mock.patch("status_checker_lambda.status_checker.setup_logging")
-    @mock.patch("status_checker_lambda.status_checker.get_parameters")
-    @mock.patch("status_checker_lambda.status_checker.get_client")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handler_when_current_collection_has_been_received_but_others_have_not_with_optional_parameters(
+    def test_process_message_when_current_collection_has_been_received_but_others_have_not_with_optional_parameters(
         self,
         mock_logger,
-        get_client_mock,
-        get_parameters_mock,
-        setup_logging_mock,
         check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
@@ -387,14 +412,8 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-        get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock,
-            "sqs": sqs_client_mock,
-            "sns": sns_client_mock,
-        }
-        get_client_mock.side_effect = get_client_mock_return_values.get
 
-        get_parameters_mock.return_value = args
+        check_for_mandatory_keys_mock.return_value = True
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -432,7 +451,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.return_value = False
 
-        event = {
+        message = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
@@ -441,15 +460,11 @@ class TestReplayer(unittest.TestCase):
             REPROCESS_FILES_FIELD_NAME: "false",
         }
 
-        status_checker.handler(event, None)
-
-        get_client_mock.assert_any_call("dynamodb")
-        get_client_mock.assert_any_call("sqs")
-        get_client_mock.assert_any_call("sns")
-
-        get_parameters_mock.assert_called_once()
-        setup_logging_mock.assert_called_once()
-        check_for_mandatory_keys_mock.assert_called_once()
+        status_checker.process_message(
+            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        )
+        
+        check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -510,16 +525,10 @@ class TestReplayer(unittest.TestCase):
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
-    @mock.patch("status_checker_lambda.status_checker.setup_logging")
-    @mock.patch("status_checker_lambda.status_checker.get_parameters")
-    @mock.patch("status_checker_lambda.status_checker.get_client")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handler_when_current_collection_has_not_been_received(
+    def test_process_message_when_current_collection_has_not_been_received(
         self,
         mock_logger,
-        get_client_mock,
-        get_parameters_mock,
-        setup_logging_mock,
         check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
@@ -534,14 +543,8 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-        get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock,
-            "sqs": sqs_client_mock,
-            "sns": sns_client_mock,
-        }
-        get_client_mock.side_effect = get_client_mock_return_values.get
 
-        get_parameters_mock.return_value = args
+        check_for_mandatory_keys_mock.return_value = True
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -554,22 +557,18 @@ class TestReplayer(unittest.TestCase):
 
         is_collection_received_mock.return_value = False
 
-        event = {
+        message = {
             COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
-        status_checker.handler(event, None)
+        status_checker.process_message(
+            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        )
 
-        get_client_mock.assert_any_call("dynamodb")
-        get_client_mock.assert_any_call("sqs")
-        get_client_mock.assert_any_call("sns")
-
-        get_parameters_mock.assert_called_once()
-        setup_logging_mock.assert_called_once()
-        check_for_mandatory_keys_mock.assert_called_once()
+        check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -580,6 +579,68 @@ class TestReplayer(unittest.TestCase):
 
         is_collection_received_mock.assert_called_once_with(single_collection_result)
 
+        update_status_for_collection_mock.assert_not_called()
+        generate_export_state_message_payload_mock.assert_not_called()
+        send_sqs_message_mock.assert_not_called()
+        query_dynamodb_for_all_collections_mock.assert_not_called()
+        check_completion_status_mock.assert_not_called()
+        generate_monitoring_message_payload_mock.assert_not_called()
+        send_sns_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.send_sns_message")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_monitoring_message_payload"
+    )
+    @mock.patch("status_checker_lambda.status_checker.check_completion_status")
+    @mock.patch(
+        "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
+    )
+    @mock.patch("status_checker_lambda.status_checker.send_sqs_message")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_export_state_message_payload"
+    )
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
+    @mock.patch("status_checker_lambda.status_checker.is_collection_received")
+    @mock.patch(
+        "status_checker_lambda.status_checker.update_files_received_for_collection"
+    )
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_stops_when_missing_mandatory_keys(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        update_files_received_for_collection_mock,
+        is_collection_received_mock,
+        update_status_for_collection_mock,
+        generate_export_state_message_payload_mock,
+        send_sqs_message_mock,
+        query_dynamodb_for_all_collections_mock,
+        check_completion_status_mock,
+        generate_monitoring_message_payload_mock,
+        send_sns_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = False
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+        }
+
+        status_checker.process_message(
+            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        )
+
+        check_for_mandatory_keys_mock.assert_called_once_with(message)
+
+        update_files_received_for_collection_mock.assert_not_called()
+        is_collection_received_mock.assert_not_called()
         update_status_for_collection_mock.assert_not_called()
         generate_export_state_message_payload_mock.assert_not_called()
         send_sqs_message_mock.assert_not_called()
@@ -782,7 +843,7 @@ class TestReplayer(unittest.TestCase):
         self.assertEqual(False, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_check_required_keys_missing_raises_error(
+    def test_check_required_keys_missing_returns_false(
         self,
         mock_logger,
     ):
@@ -792,13 +853,10 @@ class TestReplayer(unittest.TestCase):
             "snapshot_type": "test",
         }
 
-        with pytest.raises(
-            KeyError, match=r"Required keys are missing from payload: export_date"
-        ) as excinfo:
-            actual = status_checker.check_for_mandatory_keys(event)
+        self.assertFalse(status_checker.check_for_mandatory_keys(event))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_check_required_keys_present_does_not_raise_error(
+    def test_check_required_keys_present_returns_true(
         self,
         mock_logger,
     ):
@@ -809,7 +867,7 @@ class TestReplayer(unittest.TestCase):
             "export_date": "test",
         }
 
-        actual = status_checker.check_for_mandatory_keys(event)
+        self.assertTrue(status_checker.check_for_mandatory_keys(event))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_true(
@@ -1006,21 +1064,43 @@ class TestReplayer(unittest.TestCase):
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_extract_body_correctly_extracts(
+    def test_extract_messages_correctly_extracts(
         self,
         mock_logger,
     ):
         event = {
             "Records": [{"body": {"Test1": "test_value1", "Test2": "test_value2"}}]
         }
-        expected = {"Test1": "test_value1", "Test2": "test_value2"}
+        expected = [
+            {"Test1": "test_value1", "Test2": "test_value2"}
+        ]
 
-        actual = status_checker.extract_body(event)
+        actual = status_checker.extract_messages(event)
 
         self.assertEqual(expected, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_extract_body_correctly_extracts_when_body_is_escaped_json(
+    def test_extract_messages_correctly_extracts_multiple_messages(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "Records": [
+                    {"body": {"Test1": "test_value1", "Test2": "test_value2"}},
+                    {"body": {"Test3": "test_value3", "Test4": "test_value4"}}
+                ]
+        }
+        expected = [
+            {"Test1": "test_value1", "Test2": "test_value2"},
+            {"Test3": "test_value3", "Test4": "test_value4"}
+        ]
+
+        actual = status_checker.extract_messages(event)
+
+        self.assertEqual(expected, actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_extract_messages_correctly_extracts_when_body_is_escaped_json(
         self,
         mock_logger,
     ):
@@ -1029,57 +1109,79 @@ class TestReplayer(unittest.TestCase):
                 {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})}
             ]
         }
-        expected = {"Test1": "test_value1", "Test2": "test_value2"}
+        expected = [
+            {"Test1": "test_value1", "Test2": "test_value2"}
+        ]
 
-        actual = status_checker.extract_body(event)
+        actual = status_checker.extract_messages(event)
 
         self.assertEqual(expected, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_extract_body_does_not_extract_without_records_array(
+    def test_extract_messages_correctly_extracts_when_body_is_escaped_json_multiple_messages(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "Records": [
+                {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})},
+                {"body": json.dumps({"Test3": "test_value3", "Test4": "test_value4"})}
+            ]
+        }
+        expected = [
+            {"Test1": "test_value1", "Test2": "test_value2"},
+            {"Test3": "test_value3", "Test4": "test_value4"}
+        ]
+
+        actual = status_checker.extract_messages(event)
+
+        self.assertEqual(expected, actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_extract_messages_does_not_extract_without_records_array(
         self,
         mock_logger,
     ):
         event = {"Records": "test_value"}
-        expected = {"Records": "test_value"}
+        expected = [{"Records": "test_value"}]
 
-        actual = status_checker.extract_body(event)
+        actual = status_checker.extract_messages(event)
 
         self.assertEqual(expected, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_extract_body_does_not_extract_without_records_object(
+    def test_extract_messages_does_not_extract_without_records_object(
         self,
         mock_logger,
     ):
         event = {"Tests": "test_value"}
-        expected = {"Tests": "test_value"}
+        expected = [{"Tests": "test_value"}]
 
-        actual = status_checker.extract_body(event)
+        actual = status_checker.extract_messages(event)
 
         self.assertEqual(expected, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_extract_body_does_not_extract_with_empty_records_array(
+    def test_extract_messages_does_not_extract_with_empty_records_array(
         self,
         mock_logger,
     ):
         event = {"Records": []}
-        expected = {"Records": []}
+        expected = [{"Records": []}]
 
-        actual = status_checker.extract_body(event)
+        actual = status_checker.extract_messages(event)
 
         self.assertEqual(expected, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_extract_body_does_not_extract_without_body_object(
+    def test_extract_messages_does_not_extract_without_body_object(
         self,
         mock_logger,
     ):
         event = {"Records": [{"Test": {}}]}
-        expected = {"Records": [{"Test": {}}]}
+        expected = [{"Records": [{"Test": {}}]}]
 
-        actual = status_checker.extract_body(event)
+        actual = status_checker.extract_messages(event)
 
         self.assertEqual(expected, actual)
 
