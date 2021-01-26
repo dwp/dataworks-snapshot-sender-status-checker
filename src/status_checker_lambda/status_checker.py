@@ -481,7 +481,7 @@ def extract_body(event):
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
                 logger.info(f'Extracted body from event, "body": "{dumped_body}')
-                return body
+                return body if type(body) is dict else json.loads(body)
 
     return event
 
