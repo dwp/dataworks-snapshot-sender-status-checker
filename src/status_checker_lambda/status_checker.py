@@ -416,12 +416,13 @@ def check_for_mandatory_keys(event):
 
     if missing_keys:
         bad_keys = ", ".join(missing_keys)
-        error_message = f"Required keys are missing from payload: {bad_keys}"
-        raise KeyError(error_message)
+        logger.error(f'Required keys missing from payload, "missing_keys": "{bad_keys}')
+        return False
 
     logger.info(
         f'All mandatory keys present", "required_message_keys": "{required_message_keys}'
     )
+    return True
 
 
 def is_collection_received(item):
@@ -465,56 +466,66 @@ def get_client(service):
     return boto3.client(service)
 
 
-def extract_body(event):
-    """Extracts the body for the event.
+def extract_messages(event):
+    """Extracts the messages to process for the event.
 
     Arguments:
         event (dict): The incoming event
     """
     logger.info("Extracting body from event")
 
+    messages_to_process = []
+
     if "Records" in event:
-        records = event["Records"]
-        if len(records) > 0:
-            record = records[0]
+        for record in event["Records"]:
             if "body" in record:
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
-                logger.info(f'Extracted body from event, "body": "{dumped_body}')
-                return body if type(body) is dict else json.loads(body)
+                logger.info(f'Extracted a message from event, "body": "{dumped_body}')
+                messages_to_process.append(
+                    body if type(body) is dict else json.loads(body)
+                )
 
-    return event
+    if len(messages_to_process) == 0:
+        logger.info(
+            "No messages could be extracted so attempting to process event as one message"
+        )
+        messages_to_process.append(event)
+
+    logger.info(
+        f'Extracted all messages from event, "message_count": "{len(messages_to_process)}'
+    )
+    return messages_to_process
 
 
-def handler(event, context):
-    global args
-    global logger
+def process_message(message, dynamodb_client, sqs_client, sns_client):
+    """Processes an individual message.
 
-    args = get_parameters()
-    logger = setup_logging(args.log_level)
+    Arguments:
+        message (dict): The message to process
+        dynamodb_client (object): The boto3 client for dynamo db
+        sqs_client (object): The boto3 client for sqs
+        sns_client (object): The boto3 client for sns
+    """
+    dumped_message = get_escaped_json_string(message)
+    logger.info(f'Processing new message", "message": "{dumped_message}"')
 
-    dumped_event = get_escaped_json_string(event)
-    logger.info(f'Processing new event", "event": "{dumped_event}"')
+    if not check_for_mandatory_keys(message):
+        return
 
-    body = extract_body(event)
-
-    dynamodb_client = get_client("dynamodb")
-    sns_client = get_client("sns")
-    sqs_client = get_client("sqs")
-
-    check_for_mandatory_keys(body)
-
-    collection_name = body[COLLECTION_NAME_FIELD_NAME]
-    correlation_id = body[CORRELATION_ID_FIELD_NAME]
-    snapshot_type = body[SNAPSHOT_TYPE_FIELD_NAME]
-    export_date = body[EXPORT_DATE_FIELD_NAME]
+    collection_name = message[COLLECTION_NAME_FIELD_NAME]
+    correlation_id = message[CORRELATION_ID_FIELD_NAME]
+    snapshot_type = message[SNAPSHOT_TYPE_FIELD_NAME]
+    export_date = message[EXPORT_DATE_FIELD_NAME]
 
     shutdown_flag = (
-        body[SHUTDOWN_FLAG_FIELD_NAME] if SHUTDOWN_FLAG_FIELD_NAME in body else "true"
+        message[SHUTDOWN_FLAG_FIELD_NAME]
+        if SHUTDOWN_FLAG_FIELD_NAME in message
+        else "true"
     )
     reprocess_files = (
-        body[REPROCESS_FILES_FIELD_NAME]
-        if REPROCESS_FILES_FIELD_NAME in body
+        message[REPROCESS_FILES_FIELD_NAME]
+        if REPROCESS_FILES_FIELD_NAME in message
         else "true"
     )
 
@@ -558,6 +569,26 @@ def handler(event, context):
             )
     else:
         logger.info("Collection has not been fully received so no further processing")
+
+
+def handler(event, context):
+    global args
+    global logger
+
+    args = get_parameters()
+    logger = setup_logging(args.log_level)
+
+    dumped_event = get_escaped_json_string(event)
+    logger.info(f'Processing new event", "event": "{dumped_event}"')
+
+    dynamodb_client = get_client("dynamodb")
+    sqs_client = get_client("sqs")
+    sns_client = get_client("sns")
+
+    messages = extract_messages(event)
+
+    for message in messages:
+        process_message(message, dynamodb_client, sqs_client, sns_client)
 
 
 if __name__ == "__main__":

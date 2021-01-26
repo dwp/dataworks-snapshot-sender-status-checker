@@ -43,6 +43,23 @@ Required fields are:
 * `snapshot_type`
 * `export_date`
 
+Some messages sent from SQS come over in a different format. This format is also supported like below, whereby `body` must contain the same format as above (value of `body` it can be fully formed json or an escaped json string, both are supported as long as it matches the format above):
+
+```
+{
+    "Records": [
+        {
+            "body": {
+                ...
+            }
+        }
+    ]
+}
+```
+
+If the above format is used, then you can have as many records as you like as the lambda will attempt to process them all. Each body is validated against the required fields one by one.
+
+
 ## Environment variables
 
 |Variable name|Example|Description|Required|
