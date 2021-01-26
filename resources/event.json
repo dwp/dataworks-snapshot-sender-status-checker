@@ -1,6 +1,6 @@
 {
-    "correlation_id": "steven_test_1",
-    "collection_name": "db.steven.test",
+    "correlation_id": "test_1",
+    "collection_name": "db.test.collection",
     "snapshot_type": "incremental",
     "file_name": "folder1/folder2/file.enc.gz",
     "export_date": "2020-01-22"

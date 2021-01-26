@@ -60,6 +60,15 @@ def setup_logging(logger_level):
     return the_logger
 
 
+def get_escaped_json_string(json_string):
+    try:
+        escaped_string = json.dumps(json.dumps(json_string))
+    except:  # noqa: E722
+        escaped_string = json.dumps(json_string)
+
+    return escaped_string
+
+
 def get_parameters():
     parser = argparse.ArgumentParser(
         description="An AWS lambda which receives requests and a response payload "
@@ -131,12 +140,17 @@ def generate_monitoring_message_payload(snapshot_type, status):
         status (string): the free text status for the monitoring event message
 
     """
-    return {
+    payload = {
         "severity": "Critical",
         "notification_type": "Information",
         "slack_username": "Crown Export Poller",
         "title_text": f"{snapshot_type.title()} - {status}",
     }
+
+    dumped_payload = get_escaped_json_string(payload)
+    logger.info(f'Generated monitoring SNS payload", "payload": "{dumped_payload}')
+
+    return payload
 
 
 def generate_export_state_message_payload(
@@ -151,7 +165,7 @@ def generate_export_state_message_payload(
         export_date (string): the date of the export
 
     """
-    return {
+    payload = {
         "shutdown_flag": "true",
         "correlation_id": correlation_id,
         "topic_name": collection_name,
@@ -160,6 +174,11 @@ def generate_export_state_message_payload(
         "export_date": export_date,
         "send_success_indicator": "true",
     }
+
+    dumped_payload = get_escaped_json_string(payload)
+    logger.info(f'Generated export SQS payload", "payload": "{dumped_payload}')
+
+    return payload
 
 
 def send_sns_message(sns_client, payload, sns_topic_arn):
@@ -174,7 +193,12 @@ def send_sns_message(sns_client, payload, sns_topic_arn):
     global logger
 
     json_message = json.dumps(payload)
-    logger.info("Publishing payload: %s to the SNS topic: %s", payload, sns_topic_arn)
+
+    dumped_payload = get_escaped_json_string(payload)
+    logger.info(
+        f'Publishing payload to SNS", "payload": "{dumped_payload}", "sns_topic_arn": "{sns_topic_arn}'
+    )
+
     return sns_client.publish(TopicArn=sns_topic_arn, Message=json_message)
 
 
@@ -188,7 +212,12 @@ def send_sqs_message(sqs_client, payload, sqs_queue_url):
 
     """
     json_message = json.dumps(payload)
-    logger.info("Publishing payload: %s to the SQS queue: %s", payload, sqs_queue_url)
+
+    dumped_payload = get_escaped_json_string(payload)
+    logger.info(
+        f'Publishing payload to SQS", "payload": "{dumped_payload}", "sqs_queue_url": "{sqs_queue_url}'
+    )
+
     return sqs_client.send_message(QueueUrl=sqs_queue_url, MessageBody=json_message)
 
 
@@ -199,6 +228,11 @@ def check_completion_status(response_items, statuses):
         response_items: response of the  dynamo query
 
     """
+    logger.info(
+        f'Checking completion status of all collections", "response_items": "{response_items}", '
+        + '"completed_statuses": "{statuses}'
+    )
+
     is_completed = True
     for item in response_items:
         collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
@@ -211,6 +245,11 @@ def check_completion_status(response_items, statuses):
         if collection_status not in statuses:
             is_completed = False
             break
+
+    logger.info(
+        f'Checked completion status of all collections", "is_completed": "{is_completed}'
+    )
+
     return is_completed
 
 
@@ -225,10 +264,9 @@ def query_dynamodb_for_all_collections(
         correlation_id (string): String value of correlation-id, originates from SNS
     """
     logger.info(
-        'Querying for records in DynamoDb table", ddb_status_table: %s, correlation_id: %s',
-        ddb_status_table,
-        correlation_id,
+        f'Querying for records in DynamoDb", "ddb_status_table": "{ddb_status_table}", "correlation_id": "{correlation_id}'
     )
+
     response = dynamodb_client.query(
         TableName=ddb_status_table,
         KeyConditionExpression=f"{CORRELATION_ID_DDB_FIELD_NAME} = :c",
@@ -236,9 +274,11 @@ def query_dynamodb_for_all_collections(
         ConsistentRead=True,
     )
     records = response["Items"]
+
     logger.info(
-        "%s records found for correlation id : %s", len(records), correlation_id
+        f'Found records in table", "ddb_status_table": "{ddb_status_table}", "record_count": "{len(records)}'
     )
+
     return records
 
 
@@ -254,19 +294,24 @@ def get_single_collection_from_dynamodb(
         collection_name (string): String value of CollectionName column
     """
     logger.info(
-        'Querying for specific record in DynamoDb table", ddb_status_table: %s, collection_name: %s, correlation_id: %s',
-        ddb_status_table,
-        collection_name,
-        correlation_id,
+        f'Querying for specific record in DynamoDb", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
+        + '"{correlation_id}", "collection_name": "{collection_name}'
     )
+
     response = dynamodb_client.get_item(
         TableName=ddb_status_table,
         Key={
-            CORRELATION_ID_DDB_FIELD_NAME: {'S': correlation_id},
-            COLLECTION_NAME_DDB_FIELD_NAME: {'S': collection_name},
+            CORRELATION_ID_DDB_FIELD_NAME: {"S": correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {"S": collection_name},
         },
         ConsistentRead=True,
     )
+
+    logger.info(
+        f'Retrieved single collection response", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
+        + '"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+    )
+
     return response["Item"]
 
 
@@ -282,22 +327,26 @@ def update_files_received_for_collection(
         collection_name (string): String value of CollectionName column
     """
     logger.info(
-        'Incrementing files received", ddb_status_table: %s, collection_name: %s, correlation_id: %s',
-        ddb_status_table,
-        collection_name,
-        correlation_id,
+        f'Incrementing files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
+        + '"{correlation_id}", "collection_name": "{collection_name}'
     )
 
     response = dynamodb_client.update_item(
         TableName=ddb_status_table,
         Key={
-            CORRELATION_ID_DDB_FIELD_NAME: {'S': correlation_id},
-            COLLECTION_NAME_DDB_FIELD_NAME: {'S': collection_name},
+            CORRELATION_ID_DDB_FIELD_NAME: {"S": correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {"S": collection_name},
         },
         UpdateExpression=f"SET {FILES_RECEIVED_DDB_FIELD_NAME} = {FILES_RECEIVED_DDB_FIELD_NAME} + :val",
         ExpressionAttributeValues={":val": {"N": "1"}},
         ReturnValues="ALL_NEW",
     )
+
+    logger.info(
+        f'Incremented files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
+        + '"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+    )
+
     return response[ATTRIBUTES_FIELD_NAME]
 
 
@@ -318,23 +367,26 @@ def update_status_for_collection(
         collection_status (string): The status to set
     """
     logger.info(
-        'Updating collection status", ddb_status_table: %s, collection_status: %s, collection_name: %s, correlation_id: %s',
-        ddb_status_table,
-        collection_status,
-        collection_name,
-        correlation_id,
+        f'Updating collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
+        + '"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}'
     )
 
     response = dynamodb_client.update_item(
         TableName=ddb_status_table,
         Key={
-            CORRELATION_ID_DDB_FIELD_NAME: {'S': correlation_id},
-            COLLECTION_NAME_DDB_FIELD_NAME: {'S': collection_name},
+            CORRELATION_ID_DDB_FIELD_NAME: {"S": correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {"S": collection_name},
         },
         UpdateExpression=f"SET {COLLECTION_STATUS_DDB_FIELD_NAME} = :val",
         ExpressionAttributeValues={":val": {"S": collection_status}},
         ReturnValues="ALL_NEW",
     )
+
+    logger.info(
+        f'Updated collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
+        + '"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+    )
+
     return response[ATTRIBUTES_FIELD_NAME]
 
 
@@ -344,6 +396,10 @@ def check_for_mandatory_keys(event):
     Arguments:
         event (dict): The event from AWS
     """
+    logger.info(
+        f'Checking for mandatory keys", "required_message_keys": "{required_message_keys}'
+    )
+
     missing_keys = []
     for required_message_key in required_message_keys:
         if required_message_key not in event:
@@ -354,6 +410,10 @@ def check_for_mandatory_keys(event):
         error_message = f"Required keys are missing from payload: {bad_keys}"
         raise KeyError(error_message)
 
+    logger.info(
+        f'All mandatory keys present", "required_message_keys": "{required_message_keys}'
+    )
+
 
 def is_collection_received(item):
     """Checks if a collection has been fully received.
@@ -361,10 +421,28 @@ def is_collection_received(item):
     Arguments:
         item (dict): The item returned from dynamo db
     """
-    return (
-        item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"] == SENT_STATUS_VALUE
-        and item[FILES_RECEIVED_DDB_FIELD_NAME]["N"] == item[FILES_SENT_DDB_FIELD_NAME]["N"]
+    collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
+    collection_files_received_count = item[FILES_RECEIVED_DDB_FIELD_NAME]["N"]
+    collection_files_sent_count = item[FILES_SENT_DDB_FIELD_NAME]["N"]
+
+    logger.info(
+        f'Checking if collection has been received", "collection_status": "{collection_status}", '
+        + '"collection_files_received_count": "{collection_files_received_count}", "collection_files_sent_count": '
+        + '"{collection_files_sent_count}'
     )
+
+    is_received = (
+        collection_status == SENT_STATUS_VALUE
+        and collection_files_received_count == collection_files_sent_count
+    )
+
+    logger.info(
+        f'Checked if collection has been received", "is_received": "{is_received}", "collection_status": '
+        + '"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
+        + '"collection_files_sent_count": "{collection_files_sent_count}'
+    )
+
+    return is_received
 
 
 def get_client(service):
@@ -373,12 +451,17 @@ def get_client(service):
     Arguments:
         service (string): The service name to get a client for
     """
+    logger.info(f'Getting boto3 client", "service": "{service}')
+
     return boto3.client(service)
 
 
 def handler(event, context):
     global args
     global logger
+
+    dumped_event = get_escaped_json_string(event)
+    logger.info(f'Processing new event", "event": "{dumped_event}"')
 
     dynamodb_client = get_client("dynamodb")
     sns_client = get_client("sns")
@@ -424,6 +507,12 @@ def handler(event, context):
                 snapshot_type, "All collections received by NiFi"
             )
             send_sns_message(sns_client, sns_payload, args.monitoring_sns_topic_arn)
+        else:
+            logger.info(
+                "All collections have not been fully received so no further processing"
+            )
+    else:
+        logger.info("Collection has not been fully received so no further processing")
 
 
 if __name__ == "__main__":
@@ -438,4 +527,4 @@ if __name__ == "__main__":
         json_content = json.loads(open("resources/event.json", "r").read())
         handler(json_content, None)
     except Exception as err:
-        logger.error(f'Exception occurred for invocation", "error_message": "{err}')
+        logger.error(f'Exception occurred for invocation", "error_message": {err}')

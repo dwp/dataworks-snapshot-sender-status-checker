@@ -735,7 +735,10 @@ class TestReplayer(unittest.TestCase):
 
         dynamodb_mock.update_item.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
-            Key={"CorrelationId": {'S': CORRELATION_ID_1}, "CollectionName": {'S': COLLECTION_1}},
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
             UpdateExpression="SET CollectionStatus = :val",
             ExpressionAttributeValues={":val": {"S": SENT_STATUS}},
             ReturnValues="ALL_NEW",
@@ -755,7 +758,10 @@ class TestReplayer(unittest.TestCase):
 
         dynamodb_mock.update_item.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
-            Key={"CorrelationId": {'S': CORRELATION_ID_1}, "CollectionName": {'S': COLLECTION_1}},
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
             UpdateExpression="SET FilesReceived = FilesReceived + :val",
             ExpressionAttributeValues={":val": {"N": "1"}},
             ReturnValues="ALL_NEW",
@@ -775,7 +781,10 @@ class TestReplayer(unittest.TestCase):
 
         dynamodb_mock.get_item.assert_called_once_with(
             TableName=DDB_TABLE_NAME,
-            Key={"CorrelationId": {"S": CORRELATION_ID_1}, "CollectionName": {"S": COLLECTION_1}},
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
             ConsistentRead=True,
         )
 
