@@ -239,7 +239,7 @@ def check_completion_status(response_items, statuses):
     """
     logger.info(
         f'Checking completion status of all collections", "response_items": "{response_items}", '
-        + '"completed_statuses": "{statuses}'
+        + f'"completed_statuses": "{statuses}'
     )
 
     is_completed = True
@@ -304,7 +304,7 @@ def get_single_collection_from_dynamodb(
     """
     logger.info(
         f'Querying for specific record in DynamoDb", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + '"{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}'
     )
 
     response = dynamodb_client.get_item(
@@ -318,7 +318,7 @@ def get_single_collection_from_dynamodb(
 
     logger.info(
         f'Retrieved single collection response", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + '"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
     )
 
     return response["Item"]
@@ -337,7 +337,7 @@ def update_files_received_for_collection(
     """
     logger.info(
         f'Incrementing files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + '"{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}'
     )
 
     response = dynamodb_client.update_item(
@@ -353,7 +353,7 @@ def update_files_received_for_collection(
 
     logger.info(
         f'Incremented files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + '"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
     )
 
     return response[ATTRIBUTES_FIELD_NAME]
@@ -377,7 +377,7 @@ def update_status_for_collection(
     """
     logger.info(
         f'Updating collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
-        + '"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}'
     )
 
     response = dynamodb_client.update_item(
@@ -393,7 +393,7 @@ def update_status_for_collection(
 
     logger.info(
         f'Updated collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
-        + '"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
     )
 
     return response[ATTRIBUTES_FIELD_NAME]
@@ -436,8 +436,8 @@ def is_collection_received(item):
 
     logger.info(
         f'Checking if collection has been received", "collection_status": "{collection_status}", '
-        + '"collection_files_received_count": "{collection_files_received_count}", "collection_files_sent_count": '
-        + '"{collection_files_sent_count}'
+        + f'"collection_files_received_count": "{collection_files_received_count}", "collection_files_sent_count": '
+        + f'"{collection_files_sent_count}'
     )
 
     is_received = (
@@ -447,8 +447,8 @@ def is_collection_received(item):
 
     logger.info(
         f'Checked if collection has been received", "is_received": "{is_received}", "collection_status": '
-        + '"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
-        + '"collection_files_sent_count": "{collection_files_sent_count}'
+        + f'"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
+        + f'"collection_files_sent_count": "{collection_files_sent_count}'
     )
 
     return is_received
