@@ -71,7 +71,7 @@ class TestReplayer(unittest.TestCase):
 
         extract_messages_mock.return_value = [
             {"test1": "test_value1"},
-            {"test2": "test_value2"}
+            {"test2": "test_value2"},
         ]
 
         event = {
@@ -136,15 +136,15 @@ class TestReplayer(unittest.TestCase):
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_normal_file_message_mock.assert_called_once_with(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
@@ -184,19 +184,19 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-            IS_SUCCESS_FILE_FIELD_NAME: None
+            IS_SUCCESS_FILE_FIELD_NAME: None,
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_normal_file_message_mock.assert_called_once_with(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
@@ -236,19 +236,19 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-            IS_SUCCESS_FILE_FIELD_NAME: ""
+            IS_SUCCESS_FILE_FIELD_NAME: "",
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_normal_file_message_mock.assert_called_once_with(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
@@ -288,19 +288,19 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-            IS_SUCCESS_FILE_FIELD_NAME: "false"
+            IS_SUCCESS_FILE_FIELD_NAME: "false",
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_normal_file_message_mock.assert_called_once_with(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
@@ -340,19 +340,19 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-            IS_SUCCESS_FILE_FIELD_NAME: "true"
+            IS_SUCCESS_FILE_FIELD_NAME: "true",
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_success_file_message_mock.assert_called_once_with(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
@@ -387,19 +387,19 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-            IS_SUCCESS_FILE_FIELD_NAME: "true"
+            IS_SUCCESS_FILE_FIELD_NAME: "true",
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_success_file_message_mock.assert_called_once_with(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
@@ -437,18 +437,17 @@ class TestReplayer(unittest.TestCase):
         }
 
         status_checker.process_message(
-            message, 
-            dynamodb_client_mock, 
-            sqs_client_mock, 
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
             sns_client_mock,
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
         )
-        
+
         process_success_file_message_mock.assert_not_called()
         process_normal_file_message_mock.assert_not_called()
-
 
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -947,7 +946,6 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
 
-
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -958,9 +956,7 @@ class TestReplayer(unittest.TestCase):
     )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
     @mock.patch("status_checker_lambda.status_checker.is_collection_success")
-    @mock.patch(
-        "status_checker_lambda.status_checker.get_current_collection"
-    )
+    @mock.patch("status_checker_lambda.status_checker.get_current_collection")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_process_success_message_when_all_collections_have_been_successful(
         self,
@@ -1053,7 +1049,6 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
         )
 
-
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1064,9 +1059,7 @@ class TestReplayer(unittest.TestCase):
     )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
     @mock.patch("status_checker_lambda.status_checker.is_collection_success")
-    @mock.patch(
-        "status_checker_lambda.status_checker.get_current_collection"
-    )
+    @mock.patch("status_checker_lambda.status_checker.get_current_collection")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_process_success_message_when_current_collection_is_successful_but_others_are_not(
         self,
@@ -1144,7 +1137,6 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
 
-
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1155,9 +1147,7 @@ class TestReplayer(unittest.TestCase):
     )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
     @mock.patch("status_checker_lambda.status_checker.is_collection_success")
-    @mock.patch(
-        "status_checker_lambda.status_checker.get_current_collection"
-    )
+    @mock.patch("status_checker_lambda.status_checker.get_current_collection")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_process_success_message_when_current_collection_is_not_successful(
         self,
@@ -1673,9 +1663,7 @@ class TestReplayer(unittest.TestCase):
         event = {
             "Records": [{"body": {"Test1": "test_value1", "Test2": "test_value2"}}]
         }
-        expected = [
-            {"Test1": "test_value1", "Test2": "test_value2"}
-        ]
+        expected = [{"Test1": "test_value1", "Test2": "test_value2"}]
 
         actual = status_checker.extract_messages(event)
 
@@ -1688,13 +1676,13 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "Records": [
-                    {"body": {"Test1": "test_value1", "Test2": "test_value2"}},
-                    {"body": {"Test3": "test_value3", "Test4": "test_value4"}}
-                ]
+                {"body": {"Test1": "test_value1", "Test2": "test_value2"}},
+                {"body": {"Test3": "test_value3", "Test4": "test_value4"}},
+            ]
         }
         expected = [
             {"Test1": "test_value1", "Test2": "test_value2"},
-            {"Test3": "test_value3", "Test4": "test_value4"}
+            {"Test3": "test_value3", "Test4": "test_value4"},
         ]
 
         actual = status_checker.extract_messages(event)
@@ -1711,9 +1699,7 @@ class TestReplayer(unittest.TestCase):
                 {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})}
             ]
         }
-        expected = [
-            {"Test1": "test_value1", "Test2": "test_value2"}
-        ]
+        expected = [{"Test1": "test_value1", "Test2": "test_value2"}]
 
         actual = status_checker.extract_messages(event)
 
@@ -1727,12 +1713,12 @@ class TestReplayer(unittest.TestCase):
         event = {
             "Records": [
                 {"body": json.dumps({"Test1": "test_value1", "Test2": "test_value2"})},
-                {"body": json.dumps({"Test3": "test_value3", "Test4": "test_value4"})}
+                {"body": json.dumps({"Test3": "test_value3", "Test4": "test_value4"})},
             ]
         }
         expected = [
             {"Test1": "test_value1", "Test2": "test_value2"},
-            {"Test3": "test_value3", "Test4": "test_value4"}
+            {"Test3": "test_value3", "Test4": "test_value4"},
         ]
 
         actual = status_checker.extract_messages(event)

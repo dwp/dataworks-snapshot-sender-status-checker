@@ -506,7 +506,7 @@ def is_collection_success(item):
         f'Checking if collection has been successful", "collection_status": "{collection_status}'
     )
 
-    is_success = (collection_status == RECEIVED_STATUS_VALUE)
+    is_success = collection_status == RECEIVED_STATUS_VALUE
 
     logger.info(
         f'Checked if collection has been successful", "is_success": "{is_success}", "collection_status": '
@@ -543,13 +543,19 @@ def extract_messages(event):
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
                 logger.info(f'Extracted a message from event, "body": "{dumped_body}')
-                messages_to_process.append(body if type(body) is dict else json.loads(body))
+                messages_to_process.append(
+                    body if type(body) is dict else json.loads(body)
+                )
 
     if len(messages_to_process) == 0:
-        logger.info('No messages could be extracted so attempting to process event as one message')
+        logger.info(
+            "No messages could be extracted so attempting to process event as one message"
+        )
         messages_to_process.append(event)
 
-    logger.info(f'Extracted all messages from event, "message_count": "{len(messages_to_process)}')
+    logger.info(
+        f'Extracted all messages from event, "message_count": "{len(messages_to_process)}'
+    )
     return messages_to_process
 
 
@@ -711,12 +717,15 @@ def process_message(
 
     is_success_file = (
         message[IS_SUCCESS_FILE_FIELD_NAME].lower() == "true"
-        if IS_SUCCESS_FILE_FIELD_NAME in message and message[IS_SUCCESS_FILE_FIELD_NAME] is not None
+        if IS_SUCCESS_FILE_FIELD_NAME in message
+        and message[IS_SUCCESS_FILE_FIELD_NAME] is not None
         else False
     )
 
     shutdown_flag = (
-        message[SHUTDOWN_FLAG_FIELD_NAME] if SHUTDOWN_FLAG_FIELD_NAME in message else "true"
+        message[SHUTDOWN_FLAG_FIELD_NAME]
+        if SHUTDOWN_FLAG_FIELD_NAME in message
+        else "true"
     )
     reprocess_files = (
         message[REPROCESS_FILES_FIELD_NAME]
