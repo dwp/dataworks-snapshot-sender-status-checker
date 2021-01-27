@@ -158,7 +158,9 @@ def generate_monitoring_message_payload(
     }
 
     dumped_payload = get_escaped_json_string(payload)
-    logger.info(f'Generated monitoring SNS payload", "payload": "{dumped_payload}", "file_name": "{file_name}')
+    logger.info(
+        f'Generated monitoring SNS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+    )
 
     return payload
 
@@ -194,7 +196,9 @@ def generate_export_state_message_payload(
     }
 
     dumped_payload = get_escaped_json_string(payload)
-    logger.info(f'Generated export SQS payload", "payload": "{dumped_payload}", "file_name": "{file_name}')
+    logger.info(
+        f'Generated export SQS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+    )
 
     return payload
 
@@ -314,8 +318,8 @@ def query_dynamodb_for_all_collections(
     records = response["Items"]
 
     logger.info(
-        f'Found records in table", "ddb_status_table": "{ddb_status_table}", "record_count": "{len(records)}", ' +
-        f'"file_name": "{file_name}'
+        f'Found records in table", "ddb_status_table": "{ddb_status_table}", "record_count": "{len(records)}", '
+        + f'"file_name": "{file_name}'
     )
 
     return records
@@ -502,7 +506,9 @@ def check_for_mandatory_keys(
 
     if missing_keys:
         bad_keys = ", ".join(missing_keys)
-        logger.error(f'Required keys missing from payload, "missing_keys": "{bad_keys}", "file_name": "{file_name}')
+        logger.error(
+            f'Required keys missing from payload, "missing_keys": "{bad_keys}", "file_name": "{file_name}'
+        )
         return False
 
     logger.info(
@@ -598,7 +604,9 @@ def extract_messages(
             if "body" in record:
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
-                logger.info(f'Extracted a message from event", "file_name": "{file_name}", "body": "{dumped_body}')
+                logger.info(
+                    f'Extracted a message from event", "file_name": "{file_name}", "body": "{dumped_body}'
+                )
                 messages_to_process.append(
                     body if type(body) is dict else json.loads(body)
                 )
@@ -679,7 +687,9 @@ def process_success_file_message(
                 f'All collections have not been successful so no further processing", "file_name": "{file_name}'
             )
     else:
-        logger.info(f'Collection has not been successful so no further processing", "file_name": "{file_name}')
+        logger.info(
+            f'Collection has not been successful so no further processing", "file_name": "{file_name}'
+        )
 
 
 def process_normal_file_message(
@@ -771,7 +781,9 @@ def process_normal_file_message(
                 f'All collections have not been fully received so no further processing", "file_name": "{file_name}'
             )
     else:
-        logger.info(f'Collection has not been fully received so no further processing", "file_name": "{file_name}')
+        logger.info(
+            f'Collection has not been fully received so no further processing", "file_name": "{file_name}'
+        )
 
 
 def process_message(
@@ -807,8 +819,7 @@ def process_message(
 
     file_name = (
         message[FILE_NAME_FIELD_NAME]
-        if FILE_NAME_FIELD_NAME in message
-        and message[FILE_NAME_FIELD_NAME] is not None
+        if FILE_NAME_FIELD_NAME in message and message[FILE_NAME_FIELD_NAME] is not None
         else "NOT_SET"
     )
 

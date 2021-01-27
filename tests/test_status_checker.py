@@ -1001,7 +1001,8 @@ class TestReplayer(unittest.TestCase):
 
         is_collection_received_mock.assert_called_once_with(
             single_collection_result,
-            TEST_FILE_NAME,)
+            TEST_FILE_NAME,
+        )
 
         update_status_for_collection_mock.assert_not_called()
         generate_export_state_message_payload_mock.assert_not_called()
@@ -1113,7 +1114,7 @@ class TestReplayer(unittest.TestCase):
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, 
+            SNAPSHOT_TYPE,
             "All collections successful",
             TEST_FILE_NAME,
         )
@@ -1462,7 +1463,7 @@ class TestReplayer(unittest.TestCase):
             },
         ]
         actual = status_checker.check_completion_status(
-            response_items, 
+            response_items,
             [SENT_STATUS],
             TEST_FILE_NAME,
         )
@@ -1504,7 +1505,7 @@ class TestReplayer(unittest.TestCase):
             },
         ]
         actual = status_checker.check_completion_status(
-            response_items, 
+            response_items,
             [EXPORTED_STATUS, SENT_STATUS],
             TEST_FILE_NAME,
         )
@@ -1522,10 +1523,12 @@ class TestReplayer(unittest.TestCase):
             "snapshot_type": "test",
         }
 
-        self.assertFalse(status_checker.check_for_mandatory_keys(
-            event,
-            TEST_FILE_NAME,
-        ))
+        self.assertFalse(
+            status_checker.check_for_mandatory_keys(
+                event,
+                TEST_FILE_NAME,
+            )
+        )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_null_returns_false(
@@ -1539,10 +1542,12 @@ class TestReplayer(unittest.TestCase):
             "export_date": None,
         }
 
-        self.assertFalse(status_checker.check_for_mandatory_keys(
-            event,
-            TEST_FILE_NAME,
-        ))
+        self.assertFalse(
+            status_checker.check_for_mandatory_keys(
+                event,
+                TEST_FILE_NAME,
+            )
+        )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_empty_returns_false(
@@ -1556,10 +1561,12 @@ class TestReplayer(unittest.TestCase):
             "export_date": "",
         }
 
-        self.assertFalse(status_checker.check_for_mandatory_keys(
-            event,
-            TEST_FILE_NAME,
-        ))
+        self.assertFalse(
+            status_checker.check_for_mandatory_keys(
+                event,
+                TEST_FILE_NAME,
+            )
+        )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_present_returns_true(
@@ -1573,10 +1580,12 @@ class TestReplayer(unittest.TestCase):
             "export_date": "test",
         }
 
-        self.assertTrue(status_checker.check_for_mandatory_keys(
-            event,
-            TEST_FILE_NAME,
-        ))
+        self.assertTrue(
+            status_checker.check_for_mandatory_keys(
+                event,
+                TEST_FILE_NAME,
+            )
+        )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_present_returns_true_when_using_booleans(
@@ -1590,10 +1599,12 @@ class TestReplayer(unittest.TestCase):
             "export_date": True,
         }
 
-        self.assertTrue(status_checker.check_for_mandatory_keys(
-            event,
-            TEST_FILE_NAME,
-        ))
+        self.assertTrue(
+            status_checker.check_for_mandatory_keys(
+                event,
+                TEST_FILE_NAME,
+            )
+        )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_true(
