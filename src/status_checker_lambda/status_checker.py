@@ -484,7 +484,6 @@ def get_current_collection(
 
 def check_for_mandatory_keys(
     event,
-    file_name,
 ):
     """Checks for mandatory keys in the event message
 
@@ -492,7 +491,7 @@ def check_for_mandatory_keys(
         event (dict): The event from AWS
     """
     logger.info(
-        f'Checking for mandatory keys", "required_message_keys": "{required_message_keys}", "file_name": "{file_name}'
+        f'Checking for mandatory keys", "required_message_keys": "{required_message_keys}'
     )
 
     missing_keys = []
@@ -507,12 +506,12 @@ def check_for_mandatory_keys(
     if missing_keys:
         bad_keys = ", ".join(missing_keys)
         logger.error(
-            f'Required keys missing from payload, "missing_keys": "{bad_keys}", "file_name": "{file_name}'
+            f'Required keys missing from payload, "missing_keys": "{bad_keys}'
         )
         return False
 
     logger.info(
-        f'All mandatory keys present", "required_message_keys": "{required_message_keys}", "file_name": "{file_name}'
+        f'All mandatory keys present", "required_message_keys": "{required_message_keys}'
     )
     return True
 

@@ -1527,7 +1527,6 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(
             status_checker.check_for_mandatory_keys(
                 event,
-                TEST_FILE_NAME,
             )
         )
 
@@ -1546,7 +1545,6 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(
             status_checker.check_for_mandatory_keys(
                 event,
-                TEST_FILE_NAME,
             )
         )
 
@@ -1565,7 +1563,6 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(
             status_checker.check_for_mandatory_keys(
                 event,
-                TEST_FILE_NAME,
             )
         )
 
@@ -1584,7 +1581,6 @@ class TestReplayer(unittest.TestCase):
         self.assertTrue(
             status_checker.check_for_mandatory_keys(
                 event,
-                TEST_FILE_NAME,
             )
         )
 
@@ -1603,7 +1599,6 @@ class TestReplayer(unittest.TestCase):
         self.assertTrue(
             status_checker.check_for_mandatory_keys(
                 event,
-                TEST_FILE_NAME,
             )
         )
 
