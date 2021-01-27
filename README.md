@@ -13,13 +13,26 @@ This lambda will respond to SQS messages from the subscribed queues. When receiv
 
 1. Increment the files received count for the collection in the `DYNAMO_DB_EXPORT_STATUS_TABLE_NAME` table
 1. Check the `DYNAMO_DB_EXPORT_STATUS_TABLE_NAME` to see if the files received count matches the files sent count and collection status is `SENT`
-1. If it is, it will post to `MONITORING_SNS_TOPIC_ARN` with a message for snapshot sender to send the `_success` file to Crown
+1. If it is, it will post to `EXPORT_STATE_SQS_QUEUE_URL` with a message for snapshot sender to send the `_success` file to Crown
 1. It will also update collection status to `RECEIVED`
 
 If it passes the check above on file count, then the following will also be performed:
 
 1. It will check if *all* collections for the given correlation id are in a state of `RECEIVED`
-1. If they are, then it will post to `EXPORT_STATE_SQS_QUEUE_URL` with a message for monitoring to say all collections have been received by NiFi
+1. If they are, then it will post to `MONITORING_SNS_TOPIC_ARN` with a message for monitoring to say all collections have been received by NiFi
+
+### Success files
+
+If the `is_success_file` field is passed in as `true` then the flow is different to the above and instead it does the following:
+
+1. Check the `DYNAMO_DB_EXPORT_STATUS_TABLE_NAME` to see if the collection status is `RECEIVED`
+1. It will also update collection status to `SUCCESS`
+
+If it passes the check above, then the following will also be performed:
+
+1. It will check if *all* collections for the given correlation id are in a state of `SUCCESS`
+1. If they are, then it will post to `MONITORING_SNS_TOPIC_ARN` with a message for monitoring to say all collections have been successful
+
 
 ## SQS message example
 
@@ -33,6 +46,7 @@ The following is an example SQS message to receive:
     "export_date": "2020-01-01",
     "shutdown_flag": "true", # Defaults to true if not present
     "reprocess_files": "true", # Defaults to true if not present
+    "is_success_file": "true", # Defaults to false if not present
 }
 ```
 
