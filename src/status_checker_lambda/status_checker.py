@@ -10,6 +10,7 @@ CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
 SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
 EXPORT_DATE_FIELD_NAME = "export_date"
+FILE_NAME_FIELD_NAME = "file_name"
 IS_SUCCESS_FILE_FIELD_NAME = "is_success_file"
 SHUTDOWN_FLAG_FIELD_NAME = "shutdown_flag"
 REPROCESS_FILES_FIELD_NAME = "reprocess_files"
@@ -137,7 +138,11 @@ def get_parameters():
     return _args
 
 
-def generate_monitoring_message_payload(snapshot_type, status):
+def generate_monitoring_message_payload(
+    snapshot_type,
+    status,
+    file_name,
+):
     """Generates a payload for a monitoring message.
 
     Arguments:
@@ -153,7 +158,9 @@ def generate_monitoring_message_payload(snapshot_type, status):
     }
 
     dumped_payload = get_escaped_json_string(payload)
-    logger.info(f'Generated monitoring SNS payload", "payload": "{dumped_payload}')
+    logger.info(
+        f'Generated monitoring SNS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+    )
 
     return payload
 
@@ -165,6 +172,7 @@ def generate_export_state_message_payload(
     export_date,
     shutdown_flag,
     reprocess_files,
+    file_name,
 ):
     """Generates a payload for a monitoring message.
 
@@ -188,12 +196,19 @@ def generate_export_state_message_payload(
     }
 
     dumped_payload = get_escaped_json_string(payload)
-    logger.info(f'Generated export SQS payload", "payload": "{dumped_payload}')
+    logger.info(
+        f'Generated export SQS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+    )
 
     return payload
 
 
-def send_sns_message(sns_client, payload, sns_topic_arn):
+def send_sns_message(
+    sns_client,
+    payload,
+    sns_topic_arn,
+    file_name,
+):
     """Publishes the message to sns.
 
     Arguments:
@@ -208,13 +223,19 @@ def send_sns_message(sns_client, payload, sns_topic_arn):
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Publishing payload to SNS", "payload": "{dumped_payload}", "sns_topic_arn": "{sns_topic_arn}'
+        f'Publishing payload to SNS", "payload": "{dumped_payload}", "sns_topic_arn": "{sns_topic_arn}", '
+        + f'"file_name": "{file_name}'
     )
 
     return sns_client.publish(TopicArn=sns_topic_arn, Message=json_message)
 
 
-def send_sqs_message(sqs_client, payload, sqs_queue_url):
+def send_sqs_message(
+    sqs_client,
+    payload,
+    sqs_queue_url,
+    file_name,
+):
     """Publishes the message to sqs.
 
     Arguments:
@@ -227,13 +248,18 @@ def send_sqs_message(sqs_client, payload, sqs_queue_url):
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Publishing payload to SQS", "payload": "{dumped_payload}", "sqs_queue_url": "{sqs_queue_url}'
+        f'Publishing payload to SQS", "payload": "{dumped_payload}", "sqs_queue_url": "{sqs_queue_url}", '
+        + f'"file_name": "{file_name}'
     )
 
     return sqs_client.send_message(QueueUrl=sqs_queue_url, MessageBody=json_message)
 
 
-def check_completion_status(response_items, statuses):
+def check_completion_status(
+    response_items,
+    statuses,
+    file_name,
+):
     """Checks if all the collections are either exported or sent.
 
     Arguments:
@@ -242,7 +268,7 @@ def check_completion_status(response_items, statuses):
     """
     logger.info(
         f'Checking completion status of all collections", "response_items": "{response_items}", '
-        + f'"completed_statuses": "{statuses}'
+        + f'"completed_statuses": "{statuses}", "file_name": "{file_name}'
     )
 
     is_completed = True
@@ -259,14 +285,17 @@ def check_completion_status(response_items, statuses):
             break
 
     logger.info(
-        f'Checked completion status of all collections", "is_completed": "{is_completed}'
+        f'Checked completion status of all collections", "is_completed": "{is_completed}", "file_name": "{file_name}'
     )
 
     return is_completed
 
 
 def query_dynamodb_for_all_collections(
-    dynamodb_client, ddb_status_table, correlation_id
+    dynamodb_client,
+    ddb_status_table,
+    correlation_id,
+    file_name,
 ):
     """Query  DynamoDb status table for a given correlation id.
 
@@ -276,7 +305,8 @@ def query_dynamodb_for_all_collections(
         correlation_id (string): String value of correlation-id, originates from SNS
     """
     logger.info(
-        f'Querying for records in DynamoDb", "ddb_status_table": "{ddb_status_table}", "correlation_id": "{correlation_id}'
+        f'Querying for records in DynamoDb", "ddb_status_table": "{ddb_status_table}", '
+        + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
     )
 
     response = dynamodb_client.query(
@@ -288,14 +318,19 @@ def query_dynamodb_for_all_collections(
     records = response["Items"]
 
     logger.info(
-        f'Found records in table", "ddb_status_table": "{ddb_status_table}", "record_count": "{len(records)}'
+        f'Found records in table", "ddb_status_table": "{ddb_status_table}", "record_count": "{len(records)}", '
+        + f'"file_name": "{file_name}'
     )
 
     return records
 
 
 def get_single_collection_from_dynamodb(
-    dynamodb_client, ddb_status_table, correlation_id, collection_name
+    dynamodb_client,
+    ddb_status_table,
+    correlation_id,
+    collection_name,
+    file_name,
 ):
     """Query  DynamoDb status table for a given correlation id.
 
@@ -307,7 +342,7 @@ def get_single_collection_from_dynamodb(
     """
     logger.info(
         f'Querying for specific record in DynamoDb", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "file_name": "{file_name}'
     )
 
     response = dynamodb_client.get_item(
@@ -321,14 +356,18 @@ def get_single_collection_from_dynamodb(
 
     logger.info(
         f'Retrieved single collection response", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}", "file_name": "{file_name}'
     )
 
     return response["Item"]
 
 
 def update_files_received_for_collection(
-    dynamodb_client, ddb_status_table, correlation_id, collection_name
+    dynamodb_client,
+    ddb_status_table,
+    correlation_id,
+    collection_name,
+    file_name,
 ):
     """Increment files received by one in dynamodb for the given collection name and correlation id.
 
@@ -340,7 +379,7 @@ def update_files_received_for_collection(
     """
     logger.info(
         f'Incrementing files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "file_name": "{file_name}'
     )
 
     response = dynamodb_client.update_item(
@@ -356,7 +395,7 @@ def update_files_received_for_collection(
 
     logger.info(
         f'Incremented files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}", "file_name": "{file_name}'
     )
 
     return response[ATTRIBUTES_FIELD_NAME]
@@ -368,6 +407,7 @@ def update_status_for_collection(
     correlation_id,
     collection_name,
     collection_status,
+    file_name,
 ):
     """Update the status of the collection in dynamodb for the given collection name and correlation id.
 
@@ -380,7 +420,8 @@ def update_status_for_collection(
     """
     logger.info(
         f'Updating collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
-        + f'"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}", "'
+        + f'file_name": "{file_name}'
     )
 
     response = dynamodb_client.update_item(
@@ -396,7 +437,8 @@ def update_status_for_collection(
 
     logger.info(
         f'Updated collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
-        + f'"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'"{collection_status}", "correlation_id": "{correlation_id}", "collection_name": "{collection_name}", '
+        + f'"response": "{response}", "file_name": "{file_name}'
     )
 
     return response[ATTRIBUTES_FIELD_NAME]
@@ -407,6 +449,7 @@ def get_current_collection(
     ddb_status_table,
     correlation_id,
     collection_name,
+    file_name,
 ):
     """Gets the item from dynamodb for the given collection name and correlation id.
 
@@ -419,7 +462,7 @@ def get_current_collection(
     """
     logger.info(
         f'Getting collection", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "file_name": "{file_name}'
     )
 
     response = dynamodb_client.get_item(
@@ -433,19 +476,23 @@ def get_current_collection(
     logger.info(
         f'Retrieved collection", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
         + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+        + f'", "file_name": "{file_name}'
     )
 
     return response[ITEM_FIELD_NAME]
 
 
-def check_for_mandatory_keys(event):
+def check_for_mandatory_keys(
+    event,
+    file_name,
+):
     """Checks for mandatory keys in the event message
 
     Arguments:
         event (dict): The event from AWS
     """
     logger.info(
-        f'Checking for mandatory keys", "required_message_keys": "{required_message_keys}'
+        f'Checking for mandatory keys", "required_message_keys": "{required_message_keys}", "file_name": "{file_name}'
     )
 
     missing_keys = []
@@ -459,16 +506,21 @@ def check_for_mandatory_keys(event):
 
     if missing_keys:
         bad_keys = ", ".join(missing_keys)
-        logger.error(f'Required keys missing from payload, "missing_keys": "{bad_keys}')
+        logger.error(
+            f'Required keys missing from payload, "missing_keys": "{bad_keys}", "file_name": "{file_name}'
+        )
         return False
 
     logger.info(
-        f'All mandatory keys present", "required_message_keys": "{required_message_keys}'
+        f'All mandatory keys present", "required_message_keys": "{required_message_keys}", "file_name": "{file_name}'
     )
     return True
 
 
-def is_collection_received(item):
+def is_collection_received(
+    item,
+    file_name,
+):
     """Checks if a collection has been fully received.
 
     Arguments:
@@ -481,7 +533,7 @@ def is_collection_received(item):
     logger.info(
         f'Checking if collection has been received", "collection_status": "{collection_status}", '
         + f'"collection_files_received_count": "{collection_files_received_count}", "collection_files_sent_count": '
-        + f'"{collection_files_sent_count}'
+        + f'"{collection_files_sent_count}", "file_name": "{file_name}'
     )
 
     is_received = (
@@ -492,13 +544,16 @@ def is_collection_received(item):
     logger.info(
         f'Checked if collection has been received", "is_received": "{is_received}", "collection_status": '
         + f'"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
-        + f'"collection_files_sent_count": "{collection_files_sent_count}'
+        + f'"collection_files_sent_count": "{collection_files_sent_count}", "file_name": "{file_name}'
     )
 
     return is_received
 
 
-def is_collection_success(item):
+def is_collection_success(
+    item,
+    file_name,
+):
     """Checks if a collection is successful.
 
     Arguments:
@@ -507,13 +562,13 @@ def is_collection_success(item):
     collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
 
     logger.info(
-        f'Checking if collection has been successful", "collection_status": "{collection_status}'
+        f'Checking if collection has been successful", "file_name": "{file_name}", "collection_status": "{collection_status}'
     )
 
     is_success = collection_status == RECEIVED_STATUS_VALUE
 
     logger.info(
-        f'Checked if collection has been successful", "is_success": "{is_success}", "collection_status": '
+        f'Checked if collection has been successful", "file_name": "{file_name}", "is_success": "{is_success}", "collection_status": '
         + f'"{collection_status}"'
     )
 
@@ -531,13 +586,16 @@ def get_client(service):
     return boto3.client(service)
 
 
-def extract_messages(event):
+def extract_messages(
+    event,
+    file_name,
+):
     """Extracts the messages to process for the event.
 
     Arguments:
         event (dict): The incoming event
     """
-    logger.info("Extracting body from event")
+    logger.info(f'Extracting body from event", "file_name": "{file_name}')
 
     messages_to_process = []
 
@@ -546,19 +604,21 @@ def extract_messages(event):
             if "body" in record:
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
-                logger.info(f'Extracted a message from event, "body": "{dumped_body}')
+                logger.info(
+                    f'Extracted a message from event", "file_name": "{file_name}", "body": "{dumped_body}'
+                )
                 messages_to_process.append(
                     body if type(body) is dict else json.loads(body)
                 )
 
     if len(messages_to_process) == 0:
         logger.info(
-            "No messages could be extracted so attempting to process event as one message"
+            f'No messages could be extracted so attempting to process event as one message", "file_name": "{file_name}'
         )
         messages_to_process.append(event)
 
     logger.info(
-        f'Extracted all messages from event, "message_count": "{len(messages_to_process)}'
+        f'Extracted all messages from event", "file_name": "{file_name}", "message_count": "{len(messages_to_process)}'
     )
     return messages_to_process
 
@@ -571,6 +631,7 @@ def process_success_file_message(
     collection_name,
     snapshot_type,
     sns_topic_arn,
+    file_name,
 ):
     """Processes an individual success files message.
 
@@ -582,38 +643,53 @@ def process_success_file_message(
         collection_name (string): String value of CollectionName column
         snapshot_type (string): Full or incremental
         sns_topic_arn (string): The arn of the SNS topic to send to
+        file_name (string): For logging purposes
     """
     current_collection = get_current_collection(
         dynamodb_client,
         ddb_table,
         correlation_id,
         collection_name,
+        file_name,
     )
 
-    if is_collection_success(current_collection):
+    if is_collection_success(current_collection, file_name):
         update_status_for_collection(
             dynamodb_client,
             ddb_table,
             correlation_id,
             collection_name,
             SUCCESS_STATUS_VALUE,
+            file_name,
         )
 
         all_statuses = query_dynamodb_for_all_collections(
-            dynamodb_client, ddb_table, correlation_id
+            dynamodb_client,
+            ddb_table,
+            correlation_id,
+            file_name,
         )
 
-        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE]):
+        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE], file_name):
             sns_payload = generate_monitoring_message_payload(
-                snapshot_type, "All collections successful"
+                snapshot_type,
+                "All collections successful",
+                file_name,
             )
-            send_sns_message(sns_client, sns_payload, sns_topic_arn)
+            send_sns_message(
+                sns_client,
+                sns_payload,
+                sns_topic_arn,
+                file_name,
+            )
         else:
             logger.info(
-                "All collections have not been successful so no further processing"
+                f'All collections have not been successful so no further processing", "file_name": "{file_name}'
             )
     else:
-        logger.info("Collection has not been successful so no further processing")
+        logger.info(
+            f'Collection has not been successful so no further processing", "file_name": "{file_name}'
+        )
 
 
 def process_normal_file_message(
@@ -629,6 +705,7 @@ def process_normal_file_message(
     reprocess_files,
     sns_topic_arn,
     sqs_queue_url,
+    file_name,
 ):
     """Processes an individual normal files message (not a success file).
 
@@ -645,21 +722,24 @@ def process_normal_file_message(
         reprocess_files (string): The reprocess files
         sns_topic_arn (string): The arn of the SNS topic to send to
         sqs_queue_url (string): The url of the SQS queue to send to
+        file_name (string): For logging purposes
     """
     updated_collection = update_files_received_for_collection(
         dynamodb_client,
         ddb_table,
         correlation_id,
         collection_name,
+        file_name,
     )
 
-    if is_collection_received(updated_collection):
+    if is_collection_received(updated_collection, file_name):
         update_status_for_collection(
             dynamodb_client,
             ddb_table,
             correlation_id,
             collection_name,
             RECEIVED_STATUS_VALUE,
+            file_name,
         )
 
         sqs_payload = generate_export_state_message_payload(
@@ -669,23 +749,41 @@ def process_normal_file_message(
             export_date,
             shutdown_flag,
             reprocess_files,
+            file_name,
         )
-        send_sqs_message(sqs_client, sqs_payload, sqs_queue_url)
+        send_sqs_message(
+            sqs_client,
+            sqs_payload,
+            sqs_queue_url,
+            file_name,
+        )
 
         all_statuses = query_dynamodb_for_all_collections(
-            dynamodb_client, ddb_table, correlation_id
+            dynamodb_client,
+            ddb_table,
+            correlation_id,
+            file_name,
         )
-        if check_completion_status(all_statuses, [RECEIVED_STATUS_VALUE]):
+        if check_completion_status(all_statuses, [RECEIVED_STATUS_VALUE], file_name):
             sns_payload = generate_monitoring_message_payload(
-                snapshot_type, "All collections received by NiFi"
+                snapshot_type,
+                "All collections received by NiFi",
+                file_name,
             )
-            send_sns_message(sns_client, sns_payload, sns_topic_arn)
+            send_sns_message(
+                sns_client,
+                sns_payload,
+                sns_topic_arn,
+                file_name,
+            )
         else:
             logger.info(
-                "All collections have not been fully received so no further processing"
+                f'All collections have not been fully received so no further processing", "file_name": "{file_name}'
             )
     else:
-        logger.info("Collection has not been fully received so no further processing")
+        logger.info(
+            f'Collection has not been fully received so no further processing", "file_name": "{file_name}'
+        )
 
 
 def process_message(
@@ -719,6 +817,12 @@ def process_message(
     snapshot_type = message[SNAPSHOT_TYPE_FIELD_NAME]
     export_date = message[EXPORT_DATE_FIELD_NAME]
 
+    file_name = (
+        message[FILE_NAME_FIELD_NAME]
+        if FILE_NAME_FIELD_NAME in message and message[FILE_NAME_FIELD_NAME] is not None
+        else "NOT_SET"
+    )
+
     is_success_file = (
         message[IS_SUCCESS_FILE_FIELD_NAME].lower() == "true"
         if IS_SUCCESS_FILE_FIELD_NAME in message
@@ -746,6 +850,7 @@ def process_message(
             collection_name,
             snapshot_type,
             sns_topic_arn,
+            file_name,
         )
     else:
         process_normal_file_message(
@@ -761,6 +866,7 @@ def process_message(
             reprocess_files,
             sns_topic_arn,
             sqs_queue_url,
+            file_name,
         )
 
 
