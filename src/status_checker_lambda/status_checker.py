@@ -450,7 +450,11 @@ def check_for_mandatory_keys(event):
 
     missing_keys = []
     for required_message_key in required_message_keys:
-        if required_message_key not in event or event[required_message_key] is None or event[required_message_key] == "":
+        if (
+            required_message_key not in event
+            or event[required_message_key] is None
+            or event[required_message_key] == ""
+        ):
             missing_keys.append(required_message_key)
 
     if missing_keys:
