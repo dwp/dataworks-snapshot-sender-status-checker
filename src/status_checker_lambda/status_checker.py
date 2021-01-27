@@ -505,9 +505,7 @@ def check_for_mandatory_keys(
 
     if missing_keys:
         bad_keys = ", ".join(missing_keys)
-        logger.error(
-            f'Required keys missing from payload, "missing_keys": "{bad_keys}'
-        )
+        logger.error(f'Required keys missing from payload, "missing_keys": "{bad_keys}')
         return False
 
     logger.info(
