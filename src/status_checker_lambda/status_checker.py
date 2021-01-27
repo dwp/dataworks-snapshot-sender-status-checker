@@ -639,6 +639,11 @@ def process_success_file_message(
         sns_topic_arn (string): The arn of the SNS topic to send to
         file_name (string): For logging purposes
     """
+    logger.info(
+        f'Processing success file message", "file_name": "{file_name}", '
+        + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+    )
+
     current_collection = get_current_collection(
         dynamodb_client,
         ddb_table,
@@ -678,11 +683,13 @@ def process_success_file_message(
             )
         else:
             logger.info(
-                f'All collections have not been successful so no further processing", "file_name": "{file_name}'
+                f'All collections have not been successful so no further processing", "file_name": "{file_name}", '
+                + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
             )
     else:
         logger.info(
-            f'Collection has not been successful so no further processing", "file_name": "{file_name}'
+            f'Collection has not been successful so no further processing", "file_name": "{file_name}", '
+            + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
         )
 
 
@@ -718,6 +725,11 @@ def process_normal_file_message(
         sqs_queue_url (string): The url of the SQS queue to send to
         file_name (string): For logging purposes
     """
+    logger.info(
+        f'Processing normal file message", "file_name": "{file_name}", '
+        + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+    )
+
     updated_collection = update_files_received_for_collection(
         dynamodb_client,
         ddb_table,
@@ -772,11 +784,13 @@ def process_normal_file_message(
             )
         else:
             logger.info(
-                f'All collections have not been fully received so no further processing", "file_name": "{file_name}'
+                f'All collections have not been fully received so no further processing", "file_name": "{file_name}", '
+                + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
             )
     else:
         logger.info(
-            f'Collection has not been fully received so no further processing", "file_name": "{file_name}'
+            f'Collection has not been fully received so no further processing", "file_name": "{file_name}", '
+            + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
         )
 
 
