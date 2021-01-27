@@ -1402,6 +1402,34 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(status_checker.check_for_mandatory_keys(event))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_check_required_keys_null_returns_false(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "correlation_id": "test",
+            "collection_name": "test",
+            "snapshot_type": "test",
+            "export_date": None,
+        }
+
+        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_check_required_keys_empty_returns_false(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "correlation_id": "test",
+            "collection_name": "test",
+            "snapshot_type": "test",
+            "export_date": "",
+        }
+
+        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_present_returns_true(
         self,
         mock_logger,
@@ -1411,6 +1439,20 @@ class TestReplayer(unittest.TestCase):
             "collection_name": "test",
             "snapshot_type": "test",
             "export_date": "test",
+        }
+
+        self.assertTrue(status_checker.check_for_mandatory_keys(event))
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_check_required_keys_present_returns_true_when_using_booleans(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "correlation_id": "test",
+            "collection_name": "test",
+            "snapshot_type": "test",
+            "export_date": True,
         }
 
         self.assertTrue(status_checker.check_for_mandatory_keys(event))
