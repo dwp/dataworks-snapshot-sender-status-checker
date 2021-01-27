@@ -594,7 +594,7 @@ def extract_messages(
     Arguments:
         event (dict): The incoming event
     """
-    logger.info('Extracting body from event')
+    logger.info("Extracting body from event")
 
     messages_to_process = []
 
@@ -603,16 +603,14 @@ def extract_messages(
             if "body" in record:
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
-                logger.info(
-                    f'Extracted a message from event", "body": "{dumped_body}'
-                )
+                logger.info(f'Extracted a message from event", "body": "{dumped_body}')
                 messages_to_process.append(
                     body if type(body) is dict else json.loads(body)
                 )
 
     if len(messages_to_process) == 0:
         logger.info(
-            'No messages could be extracted so attempting to process event as one message'
+            "No messages could be extracted so attempting to process event as one message"
         )
         messages_to_process.append(event)
 
