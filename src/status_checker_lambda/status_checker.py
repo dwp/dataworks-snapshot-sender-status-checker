@@ -10,9 +10,11 @@ CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
 SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
 EXPORT_DATE_FIELD_NAME = "export_date"
+IS_SUCCESS_FILE_FIELD_NAME = "is_success_file"
 SHUTDOWN_FLAG_FIELD_NAME = "shutdown_flag"
 REPROCESS_FILES_FIELD_NAME = "reprocess_files"
 ATTRIBUTES_FIELD_NAME = "Attributes"
+ITEM_FIELD_NAME = "Item"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
 COLLECTION_STATUS_DDB_FIELD_NAME = "CollectionStatus"
@@ -20,6 +22,7 @@ FILES_RECEIVED_DDB_FIELD_NAME = "FilesReceived"
 FILES_SENT_DDB_FIELD_NAME = "FilesSent"
 
 SENT_STATUS_VALUE = "Sent"
+RECEIVED_STATUS_VALUE = "Received"
 SUCCESS_STATUS_VALUE = "Success"
 
 log_level = os.environ["LOG_LEVEL"] if "LOG_LEVEL" in os.environ else "INFO"
@@ -399,6 +402,42 @@ def update_status_for_collection(
     return response[ATTRIBUTES_FIELD_NAME]
 
 
+def get_current_collection(
+    dynamodb_client,
+    ddb_status_table,
+    correlation_id,
+    collection_name,
+):
+    """Gets the item from dynamodb for the given collection name and correlation id.
+
+    Arguments:
+        dynamodb_client (client): The boto3 client for Dynamodb
+        ddb_status_table (string): The name of the Dynamodb status table
+        correlation_id (string): String value of CorrelationId column
+        collection_name (string): String value of CollectionName column
+        collection_status (string): The status to set
+    """
+    logger.info(
+        f'Getting collection", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
+        + f'"{correlation_id}", "collection_name": "{collection_name}'
+    )
+
+    response = dynamodb_client.get_item(
+        TableName=ddb_status_table,
+        Key={
+            CORRELATION_ID_DDB_FIELD_NAME: {"S": correlation_id},
+            COLLECTION_NAME_DDB_FIELD_NAME: {"S": collection_name},
+        },
+    )
+
+    logger.info(
+        f'Retrieved collection", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}'
+    )
+
+    return response[ITEM_FIELD_NAME]
+
+
 def check_for_mandatory_keys(event):
     """Checks for mandatory keys in the event message
 
@@ -411,7 +450,11 @@ def check_for_mandatory_keys(event):
 
     missing_keys = []
     for required_message_key in required_message_keys:
-        if required_message_key not in event:
+        if (
+            required_message_key not in event
+            or event[required_message_key] is None
+            or event[required_message_key] == ""
+        ):
             missing_keys.append(required_message_key)
 
     if missing_keys:
@@ -453,6 +496,28 @@ def is_collection_received(item):
     )
 
     return is_received
+
+
+def is_collection_success(item):
+    """Checks if a collection is successful.
+
+    Arguments:
+        item (dict): The item returned from dynamo db
+    """
+    collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
+
+    logger.info(
+        f'Checking if collection has been successful", "collection_status": "{collection_status}'
+    )
+
+    is_success = collection_status == RECEIVED_STATUS_VALUE
+
+    logger.info(
+        f'Checked if collection has been successful", "is_success": "{is_success}", "collection_status": '
+        + f'"{collection_status}"'
+    )
+
+    return is_success
 
 
 def get_client(service):
@@ -498,7 +563,140 @@ def extract_messages(event):
     return messages_to_process
 
 
-def process_message(message, dynamodb_client, sqs_client, sns_client):
+def process_success_file_message(
+    ddb_table,
+    dynamodb_client,
+    sns_client,
+    correlation_id,
+    collection_name,
+    snapshot_type,
+    sns_topic_arn,
+):
+    """Processes an individual success files message.
+
+    Arguments:
+        ddb_table (string): The ddb table name
+        dynamodb_client (object): The boto3 client for dynamo db
+        sns_client (object): The boto3 client for sns
+        correlation_id (string): String value of CorrelationId column
+        collection_name (string): String value of CollectionName column
+        snapshot_type (string): Full or incremental
+        sns_topic_arn (string): The arn of the SNS topic to send to
+    """
+    current_collection = get_current_collection(
+        dynamodb_client,
+        ddb_table,
+        correlation_id,
+        collection_name,
+    )
+
+    if is_collection_success(current_collection):
+        update_status_for_collection(
+            dynamodb_client,
+            ddb_table,
+            correlation_id,
+            collection_name,
+            SUCCESS_STATUS_VALUE,
+        )
+
+        all_statuses = query_dynamodb_for_all_collections(
+            dynamodb_client, ddb_table, correlation_id
+        )
+
+        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE]):
+            sns_payload = generate_monitoring_message_payload(
+                snapshot_type, "All collections successful"
+            )
+            send_sns_message(sns_client, sns_payload, sns_topic_arn)
+        else:
+            logger.info(
+                "All collections have not been successful so no further processing"
+            )
+    else:
+        logger.info("Collection has not been successful so no further processing")
+
+
+def process_normal_file_message(
+    ddb_table,
+    dynamodb_client,
+    sns_client,
+    sqs_client,
+    correlation_id,
+    collection_name,
+    snapshot_type,
+    export_date,
+    shutdown_flag,
+    reprocess_files,
+    sns_topic_arn,
+    sqs_queue_url,
+):
+    """Processes an individual normal files message (not a success file).
+
+    Arguments:
+        ddb_table (string): The ddb table name
+        dynamodb_client (object): The boto3 client for dynamo db
+        sns_client (object): The boto3 client for sns
+        sqs_client (object): The boto3 client for sqs
+        correlation_id (string): String value of CorrelationId column
+        collection_name (string): String value of CollectionName column
+        snapshot_type (string): Full or incremental
+        export_date (string): The export date
+        shutdown_flag (string): The shutdown flag
+        reprocess_files (string): The reprocess files
+        sns_topic_arn (string): The arn of the SNS topic to send to
+        sqs_queue_url (string): The url of the SQS queue to send to
+    """
+    updated_collection = update_files_received_for_collection(
+        dynamodb_client,
+        ddb_table,
+        correlation_id,
+        collection_name,
+    )
+
+    if is_collection_received(updated_collection):
+        update_status_for_collection(
+            dynamodb_client,
+            ddb_table,
+            correlation_id,
+            collection_name,
+            RECEIVED_STATUS_VALUE,
+        )
+
+        sqs_payload = generate_export_state_message_payload(
+            snapshot_type,
+            correlation_id,
+            collection_name,
+            export_date,
+            shutdown_flag,
+            reprocess_files,
+        )
+        send_sqs_message(sqs_client, sqs_payload, sqs_queue_url)
+
+        all_statuses = query_dynamodb_for_all_collections(
+            dynamodb_client, ddb_table, correlation_id
+        )
+        if check_completion_status(all_statuses, [RECEIVED_STATUS_VALUE]):
+            sns_payload = generate_monitoring_message_payload(
+                snapshot_type, "All collections received by NiFi"
+            )
+            send_sns_message(sns_client, sns_payload, sns_topic_arn)
+        else:
+            logger.info(
+                "All collections have not been fully received so no further processing"
+            )
+    else:
+        logger.info("Collection has not been fully received so no further processing")
+
+
+def process_message(
+    message,
+    dynamodb_client,
+    sqs_client,
+    sns_client,
+    ddb_table,
+    sns_topic_arn,
+    sqs_queue_url,
+):
     """Processes an individual message.
 
     Arguments:
@@ -506,6 +704,9 @@ def process_message(message, dynamodb_client, sqs_client, sns_client):
         dynamodb_client (object): The boto3 client for dynamo db
         sqs_client (object): The boto3 client for sqs
         sns_client (object): The boto3 client for sns
+        ddb_table (string): The ddb table name
+        sns_topic_arn (string): The arn of the SNS topic to send to
+        sqs_queue_url (string): The url of the SQS queue to send to
     """
     dumped_message = get_escaped_json_string(message)
     logger.info(f'Processing new message", "message": "{dumped_message}"')
@@ -518,6 +719,13 @@ def process_message(message, dynamodb_client, sqs_client, sns_client):
     snapshot_type = message[SNAPSHOT_TYPE_FIELD_NAME]
     export_date = message[EXPORT_DATE_FIELD_NAME]
 
+    is_success_file = (
+        message[IS_SUCCESS_FILE_FIELD_NAME].lower() == "true"
+        if IS_SUCCESS_FILE_FIELD_NAME in message
+        and message[IS_SUCCESS_FILE_FIELD_NAME] is not None
+        else False
+    )
+
     shutdown_flag = (
         message[SHUTDOWN_FLAG_FIELD_NAME]
         if SHUTDOWN_FLAG_FIELD_NAME in message
@@ -529,46 +737,31 @@ def process_message(message, dynamodb_client, sqs_client, sns_client):
         else "true"
     )
 
-    updated_item = update_files_received_for_collection(
-        dynamodb_client,
-        args.dynamo_db_export_status_table_name,
-        correlation_id,
-        collection_name,
-    )
-
-    if is_collection_received(updated_item):
-        update_status_for_collection(
+    if is_success_file:
+        process_success_file_message(
+            ddb_table,
             dynamodb_client,
-            args.dynamo_db_export_status_table_name,
+            sns_client,
             correlation_id,
             collection_name,
-            SUCCESS_STATUS_VALUE,
-        )
-
-        sqs_payload = generate_export_state_message_payload(
             snapshot_type,
+            sns_topic_arn,
+        )
+    else:
+        process_normal_file_message(
+            ddb_table,
+            dynamodb_client,
+            sns_client,
+            sqs_client,
             correlation_id,
             collection_name,
+            snapshot_type,
             export_date,
             shutdown_flag,
             reprocess_files,
+            sns_topic_arn,
+            sqs_queue_url,
         )
-        send_sqs_message(sqs_client, sqs_payload, args.export_state_sqs_queue_url)
-
-        all_statuses = query_dynamodb_for_all_collections(
-            dynamodb_client, args.dynamo_db_export_status_table_name, correlation_id
-        )
-        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE]):
-            sns_payload = generate_monitoring_message_payload(
-                snapshot_type, "All collections received by NiFi"
-            )
-            send_sns_message(sns_client, sns_payload, args.monitoring_sns_topic_arn)
-        else:
-            logger.info(
-                "All collections have not been fully received so no further processing"
-            )
-    else:
-        logger.info("Collection has not been fully received so no further processing")
 
 
 def handler(event, context):
@@ -588,7 +781,15 @@ def handler(event, context):
     messages = extract_messages(event)
 
     for message in messages:
-        process_message(message, dynamodb_client, sqs_client, sns_client)
+        process_message(
+            message,
+            dynamodb_client,
+            sqs_client,
+            sns_client,
+            args.dynamo_db_export_status_table_name,
+            args.monitoring_sns_topic_arn,
+            args.export_state_sqs_queue_url,
+        )
 
 
 if __name__ == "__main__":

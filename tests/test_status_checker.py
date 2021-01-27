@@ -12,6 +12,7 @@ from status_checker_lambda import status_checker
 EXPORTING_STATUS = "Exporting"
 EXPORTED_STATUS = "Exported"
 SENT_STATUS = "Sent"
+RECEIVED_STATUS = "Received"
 SUCCESS_STATUS = "Success"
 COLLECTION_1 = "collection1"
 COLLECTION_2 = "collection2"
@@ -20,6 +21,7 @@ CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
 SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
 EXPORT_DATE_FIELD_NAME = "export_date"
+IS_SUCCESS_FILE_FIELD_NAME = "is_success_file"
 SHUTDOWN_FLAG_FIELD_NAME = "shutdown_flag"
 REPROCESS_FILES_FIELD_NAME = "reprocess_files"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
@@ -95,13 +97,357 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
         )
         process_message_mock.assert_any_call(
             {"test2": "test_value2"},
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
         )
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_processes_normal_message_when_success_file_field_not_present(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_normal_file_message_mock.assert_called_once_with(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_processes_normal_message_when_success_file_field_null(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            IS_SUCCESS_FILE_FIELD_NAME: None,
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_normal_file_message_mock.assert_called_once_with(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_processes_normal_message_when_success_file_field_empty(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            IS_SUCCESS_FILE_FIELD_NAME: "",
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_normal_file_message_mock.assert_called_once_with(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_processes_normal_message_when_success_file_field_not_true(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            IS_SUCCESS_FILE_FIELD_NAME: "false",
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_normal_file_message_mock.assert_called_once_with(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_processes_success_message_when_success_file_field_true(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            IS_SUCCESS_FILE_FIELD_NAME: "true",
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_called_once_with(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            SNS_TOPIC_ARN,
+        )
+
+        process_normal_file_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_processes_success_message_when_success_file_field_true_regardless_of_case(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            IS_SUCCESS_FILE_FIELD_NAME: "true",
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_called_once_with(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            SNS_TOPIC_ARN,
+        )
+
+        process_normal_file_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
+    @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_message_stops_when_missing_mandatory_keys(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_success_file_message_mock,
+        process_normal_file_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        check_for_mandatory_keys_mock.return_value = False
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+        }
+
+        status_checker.process_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        process_success_file_message_mock.assert_not_called()
+        process_normal_file_message_mock.assert_not_called()
 
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -120,12 +466,10 @@ class TestReplayer(unittest.TestCase):
     @mock.patch(
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
-    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_process_message_when_all_collections_have_been_received(
+    def test_process_normal_message_when_all_collections_have_been_received(
         self,
         mock_logger,
-        check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
         update_status_for_collection_mock,
@@ -148,8 +492,6 @@ class TestReplayer(unittest.TestCase):
         update_files_received_for_collection_mock.return_value = (
             single_collection_result
         )
-
-        check_for_mandatory_keys_mock.return_value = True
 
         is_collection_received_mock.return_value = True
 
@@ -186,18 +528,20 @@ class TestReplayer(unittest.TestCase):
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
 
-        message = {
-            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
-            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
-            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-        }
-
-        status_checker.process_message(
-            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        status_checker.process_normal_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
         )
-
-        check_for_mandatory_keys_mock.assert_called_once()
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -213,7 +557,7 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
-            SUCCESS_STATUS,
+            RECEIVED_STATUS,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
@@ -234,7 +578,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [SUCCESS_STATUS],
+            [RECEIVED_STATUS],
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
@@ -264,12 +608,10 @@ class TestReplayer(unittest.TestCase):
     @mock.patch(
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
-    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_process_message_when_current_collection_has_been_received_but_others_have_not(
+    def test_process_normal_message_when_current_collection_has_been_received_but_others_have_not(
         self,
         mock_logger,
-        check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
         update_status_for_collection_mock,
@@ -283,8 +625,6 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-
-        check_for_mandatory_keys_mock.return_value = True
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -329,11 +669,20 @@ class TestReplayer(unittest.TestCase):
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
-        status_checker.process_message(
-            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        status_checker.process_normal_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
         )
-
-        check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -349,7 +698,7 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
-            SUCCESS_STATUS,
+            RECEIVED_STATUS,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
@@ -370,7 +719,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [SUCCESS_STATUS],
+            [RECEIVED_STATUS],
         )
 
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -393,12 +742,10 @@ class TestReplayer(unittest.TestCase):
     @mock.patch(
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
-    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_process_message_when_current_collection_has_been_received_but_others_have_not_with_optional_parameters(
+    def test_process_normal_message_when_current_collection_has_been_received_but_others_have_not_with_optional_parameters(
         self,
         mock_logger,
-        check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
         update_status_for_collection_mock,
@@ -412,8 +759,6 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-
-        check_for_mandatory_keys_mock.return_value = True
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -460,11 +805,20 @@ class TestReplayer(unittest.TestCase):
             REPROCESS_FILES_FIELD_NAME: "false",
         }
 
-        status_checker.process_message(
-            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        status_checker.process_normal_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
         )
-
-        check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -480,11 +834,11 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
-            SUCCESS_STATUS,
+            RECEIVED_STATUS,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "false", "false"
+            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "true", "true"
         )
 
         send_sqs_message_mock.assert_called_once_with(
@@ -501,7 +855,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [SUCCESS_STATUS],
+            [RECEIVED_STATUS],
         )
 
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -524,12 +878,10 @@ class TestReplayer(unittest.TestCase):
     @mock.patch(
         "status_checker_lambda.status_checker.update_files_received_for_collection"
     )
-    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_process_message_when_current_collection_has_not_been_received(
+    def test_process_normal_message_when_current_collection_has_not_been_received(
         self,
         mock_logger,
-        check_for_mandatory_keys_mock,
         update_files_received_for_collection_mock,
         is_collection_received_mock,
         update_status_for_collection_mock,
@@ -543,8 +895,6 @@ class TestReplayer(unittest.TestCase):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
-
-        check_for_mandatory_keys_mock.return_value = True
 
         single_collection_result = {
             "CollectionName": SENT_STATUS,
@@ -564,11 +914,20 @@ class TestReplayer(unittest.TestCase):
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
-        status_checker.process_message(
-            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        status_checker.process_normal_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            sqs_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            "true",
+            "true",
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
         )
-
-        check_for_mandatory_keys_mock.assert_called_once_with(message)
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -595,26 +954,16 @@ class TestReplayer(unittest.TestCase):
     @mock.patch(
         "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
     )
-    @mock.patch("status_checker_lambda.status_checker.send_sqs_message")
-    @mock.patch(
-        "status_checker_lambda.status_checker.generate_export_state_message_payload"
-    )
     @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
-    @mock.patch("status_checker_lambda.status_checker.is_collection_received")
-    @mock.patch(
-        "status_checker_lambda.status_checker.update_files_received_for_collection"
-    )
-    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.is_collection_success")
+    @mock.patch("status_checker_lambda.status_checker.get_current_collection")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_process_message_stops_when_missing_mandatory_keys(
+    def test_process_success_message_when_all_collections_have_been_successful(
         self,
         mock_logger,
-        check_for_mandatory_keys_mock,
-        update_files_received_for_collection_mock,
-        is_collection_received_mock,
+        get_current_collection_mock,
+        is_collection_success_mock,
         update_status_for_collection_mock,
-        generate_export_state_message_payload_mock,
-        send_sqs_message_mock,
         query_dynamodb_for_all_collections_mock,
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
@@ -624,26 +973,223 @@ class TestReplayer(unittest.TestCase):
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
 
-        check_for_mandatory_keys_mock.return_value = False
-
-        message = {
-            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
-            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
-            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+        single_collection_result = {
+            "CollectionName": RECEIVED_STATUS,
         }
+        get_current_collection_mock.return_value = single_collection_result
+        is_collection_success_mock.return_value = True
 
-        status_checker.process_message(
-            message, dynamodb_client_mock, sqs_client_mock, sns_client_mock
+        all_collections_result = [
+            {
+                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
+                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+            },
+            {
+                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_2,
+                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+            },
+        ]
+        query_dynamodb_for_all_collections_mock.return_value = all_collections_result
+
+        check_completion_status_mock.return_value = True
+
+        expected_payload_sns = {
+            "severity": "Critical",
+            "notification_type": "Information",
+            "slack_username": "Crown Export Poller",
+            "title_text": "Fulls - test status",
+        }
+        generate_monitoring_message_payload_mock.return_value = expected_payload_sns
+
+        status_checker.process_success_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            SNS_TOPIC_ARN,
         )
 
-        check_for_mandatory_keys_mock.assert_called_once_with(message)
+        get_current_collection_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+        )
 
-        update_files_received_for_collection_mock.assert_not_called()
-        is_collection_received_mock.assert_not_called()
+        is_collection_success_mock.assert_called_once_with(single_collection_result)
+
+        update_status_for_collection_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SUCCESS_STATUS,
+        )
+
+        query_dynamodb_for_all_collections_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+        )
+
+        check_completion_status_mock.assert_called_once_with(
+            all_collections_result,
+            [SUCCESS_STATUS],
+        )
+
+        generate_monitoring_message_payload_mock.assert_called_once_with(
+            SNAPSHOT_TYPE, "All collections successful"
+        )
+
+        send_sns_message_mock.assert_called_once_with(
+            sns_client_mock,
+            expected_payload_sns,
+            SNS_TOPIC_ARN,
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.send_sns_message")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_monitoring_message_payload"
+    )
+    @mock.patch("status_checker_lambda.status_checker.check_completion_status")
+    @mock.patch(
+        "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
+    )
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
+    @mock.patch("status_checker_lambda.status_checker.is_collection_success")
+    @mock.patch("status_checker_lambda.status_checker.get_current_collection")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_success_message_when_current_collection_is_successful_but_others_are_not(
+        self,
+        mock_logger,
+        get_current_collection_mock,
+        is_collection_success_mock,
+        update_status_for_collection_mock,
+        query_dynamodb_for_all_collections_mock,
+        check_completion_status_mock,
+        generate_monitoring_message_payload_mock,
+        send_sns_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        single_collection_result = {
+            "CollectionName": RECEIVED_STATUS,
+        }
+        get_current_collection_mock.return_value = single_collection_result
+        is_collection_success_mock.return_value = True
+
+        all_collections_result = [
+            {
+                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_1,
+                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+            },
+            {
+                COLLECTION_NAME_DDB_FIELD_NAME: COLLECTION_2,
+                COLLECTION_STATUS_DDB_FIELD_NAME: EXPORTING_STATUS,
+            },
+        ]
+        query_dynamodb_for_all_collections_mock.return_value = all_collections_result
+
+        check_completion_status_mock.return_value = False
+
+        status_checker.process_success_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            SNS_TOPIC_ARN,
+        )
+
+        get_current_collection_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+        )
+
+        is_collection_success_mock.assert_called_once_with(single_collection_result)
+
+        update_status_for_collection_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SUCCESS_STATUS,
+        )
+
+        query_dynamodb_for_all_collections_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+        )
+
+        check_completion_status_mock.assert_called_once_with(
+            all_collections_result,
+            [SUCCESS_STATUS],
+        )
+
+        generate_monitoring_message_payload_mock.assert_not_called()
+        send_sns_message_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.send_sns_message")
+    @mock.patch(
+        "status_checker_lambda.status_checker.generate_monitoring_message_payload"
+    )
+    @mock.patch("status_checker_lambda.status_checker.check_completion_status")
+    @mock.patch(
+        "status_checker_lambda.status_checker.query_dynamodb_for_all_collections"
+    )
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_collection")
+    @mock.patch("status_checker_lambda.status_checker.is_collection_success")
+    @mock.patch("status_checker_lambda.status_checker.get_current_collection")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_process_success_message_when_current_collection_is_not_successful(
+        self,
+        mock_logger,
+        get_current_collection_mock,
+        is_collection_success_mock,
+        update_status_for_collection_mock,
+        query_dynamodb_for_all_collections_mock,
+        check_completion_status_mock,
+        generate_monitoring_message_payload_mock,
+        send_sns_message_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        single_collection_result = {
+            "CollectionName": RECEIVED_STATUS,
+        }
+        get_current_collection_mock.return_value = single_collection_result
+        is_collection_success_mock.return_value = False
+
+        status_checker.process_success_file_message(
+            DDB_TABLE_NAME,
+            dynamodb_client_mock,
+            sns_client_mock,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            SNS_TOPIC_ARN,
+        )
+
+        is_collection_success_mock.assert_called_once_with(single_collection_result)
+
+        get_current_collection_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+        )
+
         update_status_for_collection_mock.assert_not_called()
-        generate_export_state_message_payload_mock.assert_not_called()
-        send_sqs_message_mock.assert_not_called()
         query_dynamodb_for_all_collections_mock.assert_not_called()
         check_completion_status_mock.assert_not_called()
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -856,6 +1402,34 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(status_checker.check_for_mandatory_keys(event))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_check_required_keys_null_returns_false(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "correlation_id": "test",
+            "collection_name": "test",
+            "snapshot_type": "test",
+            "export_date": None,
+        }
+
+        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_check_required_keys_empty_returns_false(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "correlation_id": "test",
+            "collection_name": "test",
+            "snapshot_type": "test",
+            "export_date": "",
+        }
+
+        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_present_returns_true(
         self,
         mock_logger,
@@ -865,6 +1439,20 @@ class TestReplayer(unittest.TestCase):
             "collection_name": "test",
             "snapshot_type": "test",
             "export_date": "test",
+        }
+
+        self.assertTrue(status_checker.check_for_mandatory_keys(event))
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_check_required_keys_present_returns_true_when_using_booleans(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "correlation_id": "test",
+            "collection_name": "test",
+            "snapshot_type": "test",
+            "export_date": True,
         }
 
         self.assertTrue(status_checker.check_for_mandatory_keys(event))
@@ -944,6 +1532,52 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.is_collection_received(event)
 
         self.assertFalse(actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_is_collection_success_returns_true(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "CollectionStatus": {"S": RECEIVED_STATUS},
+        }
+
+        actual = status_checker.is_collection_success(event)
+
+        self.assertTrue(actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_is_collection_success_returns_false(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "CollectionStatus": {"S": SENT_STATUS},
+        }
+
+        actual = status_checker.is_collection_success(event)
+
+        self.assertFalse(actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_get_current_collection_sends_right_message(
+        self,
+        mock_logger,
+    ):
+        dynamodb_mock = mock.MagicMock()
+        dynamodb_mock.get_item = mock.MagicMock()
+
+        status_checker.get_current_collection(
+            dynamodb_mock, DDB_TABLE_NAME, CORRELATION_ID_1, COLLECTION_1
+        )
+
+        dynamodb_mock.get_item.assert_called_once_with(
+            TableName=DDB_TABLE_NAME,
+            Key={
+                "CorrelationId": {"S": CORRELATION_ID_1},
+                "CollectionName": {"S": COLLECTION_1},
+            },
+        )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_update_status_for_collection_sends_right_message(
