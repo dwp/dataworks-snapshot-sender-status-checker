@@ -91,7 +91,8 @@ class TestReplayer(unittest.TestCase):
 
         get_parameters_mock.assert_called_once()
         setup_logging_mock.assert_called_once()
-        extract_messages_mock.assert_called_once()
+
+        extract_messages_mock.assert_called_once_with(event)
 
         self.assertEqual(process_message_mock.call_count, 2)
         process_message_mock.assert_any_call(
@@ -1909,7 +1910,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -1932,7 +1932,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -1951,7 +1950,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -1974,7 +1972,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -1989,7 +1986,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -2004,7 +2000,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -2019,7 +2014,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
@@ -2034,7 +2028,6 @@ class TestReplayer(unittest.TestCase):
 
         actual = status_checker.extract_messages(
             event,
-            TEST_FILE_NAME,
         )
 
         self.assertEqual(expected, actual)
