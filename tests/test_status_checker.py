@@ -23,6 +23,7 @@ SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
 EXPORT_DATE_FIELD_NAME = "export_date"
 IS_SUCCESS_FILE_FIELD_NAME = "is_success_file"
 SHUTDOWN_FLAG_FIELD_NAME = "shutdown_flag"
+FILE_NAME_FIELD_NAME = "file_name"
 REPROCESS_FILES_FIELD_NAME = "reprocess_files"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
@@ -33,6 +34,7 @@ SNS_TOPIC_ARN = "test_sns_arn"
 EXPORT_DATE = "2021-01-01"
 SNAPSHOT_TYPE = "fulls"
 MESSAGE_STATUS = "test status"
+TEST_FILE_NAME = "test_file"
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_TABLE_NAME
@@ -133,6 +135,7 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
         }
 
         status_checker.process_message(
@@ -158,6 +161,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -185,6 +189,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
             IS_SUCCESS_FILE_FIELD_NAME: None,
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
         }
 
         status_checker.process_message(
@@ -210,6 +215,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -237,6 +243,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
             IS_SUCCESS_FILE_FIELD_NAME: "",
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
         }
 
         status_checker.process_message(
@@ -262,6 +269,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -289,6 +297,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
             IS_SUCCESS_FILE_FIELD_NAME: "false",
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
         }
 
         status_checker.process_message(
@@ -314,6 +323,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -361,6 +371,7 @@ class TestReplayer(unittest.TestCase):
             COLLECTION_1,
             SNAPSHOT_TYPE,
             SNS_TOPIC_ARN,
+            "NOT_SET",
         )
 
         process_normal_file_message_mock.assert_not_called()
@@ -388,6 +399,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
             IS_SUCCESS_FILE_FIELD_NAME: "true",
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
         }
 
         status_checker.process_message(
@@ -408,6 +420,7 @@ class TestReplayer(unittest.TestCase):
             COLLECTION_1,
             SNAPSHOT_TYPE,
             SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
         )
 
         process_normal_file_message_mock.assert_not_called()
@@ -541,6 +554,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -548,9 +562,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
-        is_collection_received_mock.assert_called_once_with(single_collection_result)
+        is_collection_received_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,
+        )
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -558,37 +576,50 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             RECEIVED_STATUS,
+            TEST_FILE_NAME,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "true", "true"
+            SNAPSHOT_TYPE,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            EXPORT_DATE,
+            "true",
+            "true",
+            TEST_FILE_NAME,
         )
 
         send_sqs_message_mock.assert_called_once_with(
             sqs_client_mock,
             expected_payload_sqs,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
+            TEST_FILE_NAME,
         )
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [RECEIVED_STATUS],
+            TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, "All collections received by NiFi"
+            SNAPSHOT_TYPE,
+            "All collections received by NiFi",
+            TEST_FILE_NAME,
         )
 
         send_sns_message_mock.assert_called_once_with(
             sns_client_mock,
             expected_payload_sns,
             SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
         )
 
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
@@ -682,6 +713,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -689,9 +721,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
-        is_collection_received_mock.assert_called_once_with(single_collection_result)
+        is_collection_received_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,
+        )
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -699,27 +735,37 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             RECEIVED_STATUS,
+            TEST_FILE_NAME,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "true", "true"
+            SNAPSHOT_TYPE,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            EXPORT_DATE,
+            "true",
+            "true",
+            TEST_FILE_NAME,
         )
 
         send_sqs_message_mock.assert_called_once_with(
             sqs_client_mock,
             expected_payload_sqs,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
+            TEST_FILE_NAME,
         )
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [RECEIVED_STATUS],
+            TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -818,6 +864,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -825,9 +872,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
-        is_collection_received_mock.assert_called_once_with(single_collection_result)
+        is_collection_received_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,
+        )
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -835,27 +886,37 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             RECEIVED_STATUS,
+            TEST_FILE_NAME,
         )
 
         generate_export_state_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "true", "true"
+            SNAPSHOT_TYPE,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            EXPORT_DATE,
+            "true",
+            "true",
+            TEST_FILE_NAME,
         )
 
         send_sqs_message_mock.assert_called_once_with(
             sqs_client_mock,
             expected_payload_sqs,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
+            TEST_FILE_NAME,
         )
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [RECEIVED_STATUS],
+            TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -927,6 +988,7 @@ class TestReplayer(unittest.TestCase):
             "true",
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            TEST_FILE_NAME,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -934,9 +996,12 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
-        is_collection_received_mock.assert_called_once_with(single_collection_result)
+        is_collection_received_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,)
 
         update_status_for_collection_mock.assert_not_called()
         generate_export_state_message_payload_mock.assert_not_called()
@@ -1009,6 +1074,7 @@ class TestReplayer(unittest.TestCase):
             COLLECTION_1,
             SNAPSHOT_TYPE,
             SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
         )
 
         get_current_collection_mock.assert_called_once_with(
@@ -1016,9 +1082,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
-        is_collection_success_mock.assert_called_once_with(single_collection_result)
+        is_collection_success_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,
+        )
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -1026,27 +1096,33 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SUCCESS_STATUS,
+            TEST_FILE_NAME,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
+            TEST_FILE_NAME,
         )
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [SUCCESS_STATUS],
+            TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE, "All collections successful"
+            SNAPSHOT_TYPE, 
+            "All collections successful",
+            TEST_FILE_NAME,
         )
 
         send_sns_message_mock.assert_called_once_with(
             sns_client_mock,
             expected_payload_sns,
             SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
         )
 
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
@@ -1104,6 +1180,7 @@ class TestReplayer(unittest.TestCase):
             COLLECTION_1,
             SNAPSHOT_TYPE,
             SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
         )
 
         get_current_collection_mock.assert_called_once_with(
@@ -1111,9 +1188,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
-        is_collection_success_mock.assert_called_once_with(single_collection_result)
+        is_collection_success_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,
+        )
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
@@ -1121,17 +1202,20 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SUCCESS_STATUS,
+            TEST_FILE_NAME,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
+            TEST_FILE_NAME,
         )
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [SUCCESS_STATUS],
+            TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_not_called()
@@ -1178,15 +1262,20 @@ class TestReplayer(unittest.TestCase):
             COLLECTION_1,
             SNAPSHOT_TYPE,
             SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
         )
 
-        is_collection_success_mock.assert_called_once_with(single_collection_result)
+        is_collection_success_mock.assert_called_once_with(
+            single_collection_result,
+            TEST_FILE_NAME,
+        )
 
         get_current_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
         update_status_for_collection_mock.assert_not_called()
@@ -1204,7 +1293,9 @@ class TestReplayer(unittest.TestCase):
             "title_text": "Fulls - test status",
         }
         actual_payload = status_checker.generate_monitoring_message_payload(
-            SNAPSHOT_TYPE, MESSAGE_STATUS
+            SNAPSHOT_TYPE,
+            MESSAGE_STATUS,
+            TEST_FILE_NAME,
         )
         self.assertEqual(expected_payload, actual_payload)
 
@@ -1220,7 +1311,13 @@ class TestReplayer(unittest.TestCase):
             "send_success_indicator": "true",
         }
         actual_payload = status_checker.generate_export_state_message_payload(
-            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "true", "false"
+            SNAPSHOT_TYPE,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            EXPORT_DATE,
+            "true",
+            "false",
+            TEST_FILE_NAME,
         )
         self.assertEqual(expected_payload, actual_payload)
 
@@ -1236,7 +1333,13 @@ class TestReplayer(unittest.TestCase):
             "send_success_indicator": "true",
         }
         actual_payload = status_checker.generate_export_state_message_payload(
-            SNAPSHOT_TYPE, CORRELATION_ID_1, COLLECTION_1, EXPORT_DATE, "false", "true"
+            SNAPSHOT_TYPE,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            EXPORT_DATE,
+            "false",
+            "true",
+            TEST_FILE_NAME,
         )
         self.assertEqual(expected_payload, actual_payload)
 
@@ -1252,7 +1355,9 @@ class TestReplayer(unittest.TestCase):
             }
         ]
         actual = status_checker.check_completion_status(
-            response_items, [EXPORTED_STATUS]
+            response_items,
+            [EXPORTED_STATUS],
+            TEST_FILE_NAME,
         )
 
         self.assertEqual(True, actual)
@@ -1273,7 +1378,9 @@ class TestReplayer(unittest.TestCase):
             },
         ]
         actual = status_checker.check_completion_status(
-            response_items, [EXPORTED_STATUS]
+            response_items,
+            [EXPORTED_STATUS],
+            TEST_FILE_NAME,
         )
 
         self.assertEqual(True, actual)
@@ -1290,7 +1397,9 @@ class TestReplayer(unittest.TestCase):
             }
         ]
         actual = status_checker.check_completion_status(
-            response_items, [EXPORTED_STATUS, SENT_STATUS]
+            response_items,
+            [EXPORTED_STATUS, SENT_STATUS],
+            TEST_FILE_NAME,
         )
 
         self.assertEqual(True, actual)
@@ -1311,7 +1420,9 @@ class TestReplayer(unittest.TestCase):
             },
         ]
         actual = status_checker.check_completion_status(
-            response_items, [EXPORTED_STATUS, SENT_STATUS]
+            response_items,
+            [EXPORTED_STATUS, SENT_STATUS],
+            TEST_FILE_NAME,
         )
 
         self.assertEqual(True, actual)
@@ -1327,7 +1438,11 @@ class TestReplayer(unittest.TestCase):
                 COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             }
         ]
-        actual = status_checker.check_completion_status(response_items, [SENT_STATUS])
+        actual = status_checker.check_completion_status(
+            response_items,
+            [SENT_STATUS],
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(False, actual)
 
@@ -1346,7 +1461,11 @@ class TestReplayer(unittest.TestCase):
                 COLLECTION_STATUS_DDB_FIELD_NAME: {"S": EXPORTING_STATUS},
             },
         ]
-        actual = status_checker.check_completion_status(response_items, [SENT_STATUS])
+        actual = status_checker.check_completion_status(
+            response_items, 
+            [SENT_STATUS],
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(False, actual)
 
@@ -1362,7 +1481,9 @@ class TestReplayer(unittest.TestCase):
             }
         ]
         actual = status_checker.check_completion_status(
-            response_items, [EXPORTED_STATUS, SENT_STATUS]
+            response_items,
+            [EXPORTED_STATUS, SENT_STATUS],
+            TEST_FILE_NAME,
         )
 
         self.assertEqual(False, actual)
@@ -1383,7 +1504,9 @@ class TestReplayer(unittest.TestCase):
             },
         ]
         actual = status_checker.check_completion_status(
-            response_items, [EXPORTED_STATUS, SENT_STATUS]
+            response_items, 
+            [EXPORTED_STATUS, SENT_STATUS],
+            TEST_FILE_NAME,
         )
 
         self.assertEqual(False, actual)
@@ -1399,7 +1522,10 @@ class TestReplayer(unittest.TestCase):
             "snapshot_type": "test",
         }
 
-        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+        self.assertFalse(status_checker.check_for_mandatory_keys(
+            event,
+            TEST_FILE_NAME,
+        ))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_null_returns_false(
@@ -1413,7 +1539,10 @@ class TestReplayer(unittest.TestCase):
             "export_date": None,
         }
 
-        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+        self.assertFalse(status_checker.check_for_mandatory_keys(
+            event,
+            TEST_FILE_NAME,
+        ))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_empty_returns_false(
@@ -1427,7 +1556,10 @@ class TestReplayer(unittest.TestCase):
             "export_date": "",
         }
 
-        self.assertFalse(status_checker.check_for_mandatory_keys(event))
+        self.assertFalse(status_checker.check_for_mandatory_keys(
+            event,
+            TEST_FILE_NAME,
+        ))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_present_returns_true(
@@ -1441,7 +1573,10 @@ class TestReplayer(unittest.TestCase):
             "export_date": "test",
         }
 
-        self.assertTrue(status_checker.check_for_mandatory_keys(event))
+        self.assertTrue(status_checker.check_for_mandatory_keys(
+            event,
+            TEST_FILE_NAME,
+        ))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_check_required_keys_present_returns_true_when_using_booleans(
@@ -1455,7 +1590,10 @@ class TestReplayer(unittest.TestCase):
             "export_date": True,
         }
 
-        self.assertTrue(status_checker.check_for_mandatory_keys(event))
+        self.assertTrue(status_checker.check_for_mandatory_keys(
+            event,
+            TEST_FILE_NAME,
+        ))
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_true(
@@ -1468,7 +1606,10 @@ class TestReplayer(unittest.TestCase):
             "FilesSent": {"N": 1},
         }
 
-        actual = status_checker.is_collection_received(event)
+        actual = status_checker.is_collection_received(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertTrue(actual)
 
@@ -1483,7 +1624,10 @@ class TestReplayer(unittest.TestCase):
             "FilesSent": {"N": 2},
         }
 
-        actual = status_checker.is_collection_received(event)
+        actual = status_checker.is_collection_received(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertFalse(actual)
 
@@ -1498,7 +1642,10 @@ class TestReplayer(unittest.TestCase):
             "FilesSent": {"N": 1},
         }
 
-        actual = status_checker.is_collection_received(event)
+        actual = status_checker.is_collection_received(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertFalse(actual)
 
@@ -1513,7 +1660,10 @@ class TestReplayer(unittest.TestCase):
             "FilesSent": {"N": 1},
         }
 
-        actual = status_checker.is_collection_received(event)
+        actual = status_checker.is_collection_received(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertFalse(actual)
 
@@ -1529,7 +1679,10 @@ class TestReplayer(unittest.TestCase):
             "FilesSent": 1,
         }
 
-        actual = status_checker.is_collection_received(event)
+        actual = status_checker.is_collection_received(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertFalse(actual)
 
@@ -1542,7 +1695,10 @@ class TestReplayer(unittest.TestCase):
             "CollectionStatus": {"S": RECEIVED_STATUS},
         }
 
-        actual = status_checker.is_collection_success(event)
+        actual = status_checker.is_collection_success(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertTrue(actual)
 
@@ -1555,7 +1711,10 @@ class TestReplayer(unittest.TestCase):
             "CollectionStatus": {"S": SENT_STATUS},
         }
 
-        actual = status_checker.is_collection_success(event)
+        actual = status_checker.is_collection_success(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertFalse(actual)
 
@@ -1568,7 +1727,11 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock.get_item = mock.MagicMock()
 
         status_checker.get_current_collection(
-            dynamodb_mock, DDB_TABLE_NAME, CORRELATION_ID_1, COLLECTION_1
+            dynamodb_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
         dynamodb_mock.get_item.assert_called_once_with(
@@ -1588,7 +1751,12 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock.update_item = mock.MagicMock()
 
         status_checker.update_status_for_collection(
-            dynamodb_mock, DDB_TABLE_NAME, CORRELATION_ID_1, COLLECTION_1, SENT_STATUS
+            dynamodb_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SENT_STATUS,
+            TEST_FILE_NAME,
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
@@ -1611,7 +1779,11 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock.update_item = mock.MagicMock()
 
         status_checker.update_files_received_for_collection(
-            dynamodb_mock, DDB_TABLE_NAME, CORRELATION_ID_1, COLLECTION_1
+            dynamodb_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
@@ -1634,7 +1806,11 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock.get_item = mock.MagicMock()
 
         status_checker.get_single_collection_from_dynamodb(
-            dynamodb_mock, DDB_TABLE_NAME, CORRELATION_ID_1, COLLECTION_1
+            dynamodb_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            TEST_FILE_NAME,
         )
 
         dynamodb_mock.get_item.assert_called_once_with(
@@ -1655,7 +1831,10 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock.query = mock.MagicMock()
 
         status_checker.query_dynamodb_for_all_collections(
-            dynamodb_mock, DDB_TABLE_NAME, CORRELATION_ID_1
+            dynamodb_mock,
+            DDB_TABLE_NAME,
+            CORRELATION_ID_1,
+            TEST_FILE_NAME,
         )
 
         dynamodb_mock.query.assert_called_once_with(
@@ -1675,7 +1854,12 @@ class TestReplayer(unittest.TestCase):
 
         payload = {"test_key": "test_value"}
 
-        status_checker.send_sqs_message(sqs_mock, payload, SQS_QUEUE_URL)
+        status_checker.send_sqs_message(
+            sqs_mock,
+            payload,
+            SQS_QUEUE_URL,
+            TEST_FILE_NAME,
+        )
 
         sqs_mock.send_message.assert_called_once_with(
             QueueUrl=SQS_QUEUE_URL, MessageBody='{"test_key": "test_value"}'
@@ -1691,7 +1875,12 @@ class TestReplayer(unittest.TestCase):
 
         payload = {"test_key": "test_value"}
 
-        status_checker.send_sns_message(sns_mock, payload, SNS_TOPIC_ARN)
+        status_checker.send_sns_message(
+            sns_mock,
+            payload,
+            SNS_TOPIC_ARN,
+            TEST_FILE_NAME,
+        )
 
         sns_mock.publish.assert_called_once_with(
             TopicArn=SNS_TOPIC_ARN, Message='{"test_key": "test_value"}'
@@ -1707,7 +1896,10 @@ class TestReplayer(unittest.TestCase):
         }
         expected = [{"Test1": "test_value1", "Test2": "test_value2"}]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1727,7 +1919,10 @@ class TestReplayer(unittest.TestCase):
             {"Test3": "test_value3", "Test4": "test_value4"},
         ]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1743,7 +1938,10 @@ class TestReplayer(unittest.TestCase):
         }
         expected = [{"Test1": "test_value1", "Test2": "test_value2"}]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1763,7 +1961,10 @@ class TestReplayer(unittest.TestCase):
             {"Test3": "test_value3", "Test4": "test_value4"},
         ]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1775,7 +1976,10 @@ class TestReplayer(unittest.TestCase):
         event = {"Records": "test_value"}
         expected = [{"Records": "test_value"}]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1787,7 +1991,10 @@ class TestReplayer(unittest.TestCase):
         event = {"Tests": "test_value"}
         expected = [{"Tests": "test_value"}]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1799,7 +2006,10 @@ class TestReplayer(unittest.TestCase):
         event = {"Records": []}
         expected = [{"Records": []}]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 
@@ -1811,7 +2021,10 @@ class TestReplayer(unittest.TestCase):
         event = {"Records": [{"Test": {}}]}
         expected = [{"Records": [{"Test": {}}]}]
 
-        actual = status_checker.extract_messages(event)
+        actual = status_checker.extract_messages(
+            event,
+            TEST_FILE_NAME,
+        )
 
         self.assertEqual(expected, actual)
 

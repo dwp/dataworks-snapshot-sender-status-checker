@@ -47,6 +47,7 @@ The following is an example SQS message to receive:
     "shutdown_flag": "true", # Defaults to true if not present
     "reprocess_files": "true", # Defaults to true if not present
     "is_success_file": "true", # Defaults to false if not present
+    "filename": "folder/db.database.collection.gz.enc", # Used for logging only, defaults to NOT_SET
 }
 ```
 
