@@ -588,14 +588,13 @@ def get_client(service):
 
 def extract_messages(
     event,
-    file_name,
 ):
     """Extracts the messages to process for the event.
 
     Arguments:
         event (dict): The incoming event
     """
-    logger.info(f'Extracting body from event", "file_name": "{file_name}')
+    logger.info("Extracting body from event")
 
     messages_to_process = []
 
@@ -604,21 +603,19 @@ def extract_messages(
             if "body" in record:
                 body = record["body"]
                 dumped_body = get_escaped_json_string(body)
-                logger.info(
-                    f'Extracted a message from event", "file_name": "{file_name}", "body": "{dumped_body}'
-                )
+                logger.info(f'Extracted a message from event", "body": "{dumped_body}')
                 messages_to_process.append(
                     body if type(body) is dict else json.loads(body)
                 )
 
     if len(messages_to_process) == 0:
         logger.info(
-            f'No messages could be extracted so attempting to process event as one message", "file_name": "{file_name}'
+            "No messages could be extracted so attempting to process event as one message"
         )
         messages_to_process.append(event)
 
     logger.info(
-        f'Extracted all messages from event", "file_name": "{file_name}", "message_count": "{len(messages_to_process)}'
+        f'Extracted all messages from event", "message_count": "{len(messages_to_process)}'
     )
     return messages_to_process
 
