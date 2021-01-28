@@ -148,6 +148,7 @@ def generate_monitoring_message_payload(
     Arguments:
         snapshot_type (string): full or incremental
         status (string): the free text status for the monitoring event message
+        file_name: file name for logging purposes
 
     """
     payload = {
@@ -159,7 +160,7 @@ def generate_monitoring_message_payload(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Generated monitoring SNS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+        f'Generated monitoring SNS payload", "payload": {dumped_payload}, "file_name": "{file_name}'
     )
 
     return payload
@@ -183,6 +184,7 @@ def generate_export_state_message_payload(
         export_date (string): the date of the export
         shutdown_flag (string): whether to reprocess the files on NiFi if they exist
         reprocess_files (string): whether to reprocess the files on NiFi if they exist
+        file_name: file name for logging purposes
 
     """
     payload = {
@@ -197,7 +199,7 @@ def generate_export_state_message_payload(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Generated export SQS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+        f'Generated export SQS payload", "payload": {dumped_payload}, "file_name": "{file_name}'
     )
 
     return payload
@@ -215,6 +217,7 @@ def send_sns_message(
         sns_client (client): The boto3 client for SQS
         payload (dict): the payload to post to SNS
         sns_topic_arn (string): the arn for the SNS topic
+        file_name: file name for logging purposes
 
     """
     global logger
@@ -223,7 +226,7 @@ def send_sns_message(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Publishing payload to SNS", "payload": "{dumped_payload}", "sns_topic_arn": "{sns_topic_arn}", '
+        f'Publishing payload to SNS", "payload": {dumped_payload}, "sns_topic_arn": "{sns_topic_arn}", '
         + f'"file_name": "{file_name}'
     )
 
@@ -242,13 +245,14 @@ def send_sqs_message(
         sqs_client (client): The boto3 client for SQS
         payload (dict): the payload to post to SQS
         sqs_queue_url (string): the url of the SQS queue
+        file_name: file name for logging purposes
 
     """
     json_message = json.dumps(payload)
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Publishing payload to SQS", "payload": "{dumped_payload}", "sqs_queue_url": "{sqs_queue_url}", '
+        f'Publishing payload to SQS", "payload": {dumped_payload}, "sqs_queue_url": "{sqs_queue_url}", '
         + f'"file_name": "{file_name}'
     )
 
@@ -258,17 +262,21 @@ def send_sqs_message(
 def check_completion_status(
     response_items,
     statuses,
+    snapshot_type,
     file_name,
 ):
     """Checks if all the collections are either exported or sent.
 
     Arguments:
         response_items: response of the  dynamo query
+        statuses: an array of valid statuses equalling completion
+        snapshot_type: incrementals or fulls
+        file_name: file name for logging purposes
 
     """
     logger.info(
         f'Checking completion status of all collections", "response_items": "{response_items}", '
-        + f'"completed_statuses": "{statuses}", "file_name": "{file_name}'
+        + f'"completed_statuses": "{statuses}", "snapshot_type": "{snapshot_type}, "file_name": "{file_name}'
     )
 
     is_completed = True
@@ -303,6 +311,7 @@ def query_dynamodb_for_all_collections(
         dynamodb_client (client): The boto3 client for Dynamodb
         ddb_status_table (string): The name of the Dynamodb status table
         correlation_id (string): String value of correlation-id, originates from SNS
+        file_name: file name for logging purposes
     """
     logger.info(
         f'Querying for records in DynamoDb", "ddb_status_table": "{ddb_status_table}", '
@@ -339,6 +348,7 @@ def get_single_collection_from_dynamodb(
         ddb_status_table (string): The name of the Dynamodb status table
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
+        file_name: file name for logging purposes
     """
     logger.info(
         f'Querying for specific record in DynamoDb", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
@@ -376,6 +386,7 @@ def update_files_received_for_collection(
         ddb_status_table (string): The name of the Dynamodb status table
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
+        file_name: file name for logging purposes
     """
     logger.info(
         f'Incrementing files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
@@ -417,6 +428,7 @@ def update_status_for_collection(
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
         collection_status (string): The status to set
+        file_name: file name for logging purposes
     """
     logger.info(
         f'Updating collection status", "ddb_status_table": "{ddb_status_table}", "collection_status": '
@@ -459,6 +471,7 @@ def get_current_collection(
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
         collection_status (string): The status to set
+        file_name: file name for logging purposes
     """
     logger.info(
         f'Getting collection", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
@@ -519,6 +532,7 @@ def is_collection_received(
     file_name,
 ):
     """Checks if a collection has been fully received.
+        file_name: file name for logging purposes
 
     Arguments:
         item (dict): The item returned from dynamo db
@@ -555,6 +569,7 @@ def is_collection_success(
 
     Arguments:
         item (dict): The item returned from dynamo db
+        file_name: file name for logging purposes
     """
     collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
 
@@ -599,8 +614,7 @@ def extract_messages(
         for record in event["Records"]:
             if "body" in record:
                 body = record["body"]
-                dumped_body = get_escaped_json_string(body)
-                logger.info(f'Extracted a message from event", "body": "{dumped_body}')
+                logger.info(f'Extracted a message from event", "body": {body}')
                 messages_to_process.append(
                     body if type(body) is dict else json.loads(body)
                 )
@@ -669,7 +683,9 @@ def process_success_file_message(
             file_name,
         )
 
-        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE], file_name):
+        if check_completion_status(
+            all_statuses, [SUCCESS_STATUS_VALUE], snapshot_type, file_name
+        ):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type,
                 "All collections successful",
@@ -770,7 +786,9 @@ def process_normal_file_message(
             correlation_id,
             file_name,
         )
-        if check_completion_status(all_statuses, [RECEIVED_STATUS_VALUE], file_name):
+        if check_completion_status(
+            all_statuses, [RECEIVED_STATUS_VALUE], snapshot_type, file_name
+        ):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type,
                 "All collections received by NiFi",

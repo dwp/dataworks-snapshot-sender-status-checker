@@ -607,6 +607,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [RECEIVED_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -766,6 +767,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [RECEIVED_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -917,6 +919,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [RECEIVED_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1111,6 +1114,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [SUCCESS_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1217,6 +1221,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
             [SUCCESS_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1359,6 +1364,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [EXPORTED_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1382,6 +1388,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [EXPORTED_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1401,6 +1408,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1424,6 +1432,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1443,6 +1452,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [SENT_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1466,6 +1476,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [SENT_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1485,6 +1496,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
@@ -1508,6 +1520,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.check_completion_status(
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
         )
 
