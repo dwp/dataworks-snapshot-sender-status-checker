@@ -684,7 +684,9 @@ def process_success_file_message(
             file_name,
         )
 
-        if check_completion_status(all_statuses, [SUCCESS_STATUS_VALUE], snapshot_type, file_name):
+        if check_completion_status(
+            all_statuses, [SUCCESS_STATUS_VALUE], snapshot_type, file_name
+        ):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type,
                 "All collections successful",
@@ -785,7 +787,9 @@ def process_normal_file_message(
             correlation_id,
             file_name,
         )
-        if check_completion_status(all_statuses, [RECEIVED_STATUS_VALUE], snapshot_type, file_name):
+        if check_completion_status(
+            all_statuses, [RECEIVED_STATUS_VALUE], snapshot_type, file_name
+        ):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type,
                 "All collections received by NiFi",
