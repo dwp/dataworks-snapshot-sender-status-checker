@@ -160,7 +160,7 @@ def generate_monitoring_message_payload(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Generated monitoring SNS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+        f'Generated monitoring SNS payload", "payload": {dumped_payload}, "file_name": "{file_name}'
     )
 
     return payload
@@ -199,7 +199,7 @@ def generate_export_state_message_payload(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Generated export SQS payload", "payload": "{dumped_payload}", "file_name": "{file_name}'
+        f'Generated export SQS payload", "payload": {dumped_payload}, "file_name": "{file_name}'
     )
 
     return payload
@@ -226,7 +226,7 @@ def send_sns_message(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Publishing payload to SNS", "payload": "{dumped_payload}", "sns_topic_arn": "{sns_topic_arn}", '
+        f'Publishing payload to SNS", "payload": {dumped_payload}, "sns_topic_arn": "{sns_topic_arn}", '
         + f'"file_name": "{file_name}'
     )
 
@@ -252,7 +252,7 @@ def send_sqs_message(
 
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
-        f'Publishing payload to SQS", "payload": "{dumped_payload}", "sqs_queue_url": "{sqs_queue_url}", '
+        f'Publishing payload to SQS", "payload": {dumped_payload}, "sqs_queue_url": "{sqs_queue_url}", '
         + f'"file_name": "{file_name}'
     )
 
@@ -614,8 +614,7 @@ def extract_messages(
         for record in event["Records"]:
             if "body" in record:
                 body = record["body"]
-                dumped_body = get_escaped_json_string(body)
-                logger.info(f'Extracted a message from event", "body": "{dumped_body}')
+                logger.info(f'Extracted a message from event", "body": {body}')
                 messages_to_process.append(
                     body if type(body) is dict else json.loads(body)
                 )
