@@ -19,9 +19,11 @@ ITEM_FIELD_NAME = "Item"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
 COLLECTION_STATUS_DDB_FIELD_NAME = "CollectionStatus"
+FILES_EXPORTED_DDB_FIELD_NAME = "FilesExported"
 FILES_RECEIVED_DDB_FIELD_NAME = "FilesReceived"
 FILES_SENT_DDB_FIELD_NAME = "FilesSent"
 
+EXPORTED_STATUS_VALUE = "Exported"
 SENT_STATUS_VALUE = "Sent"
 RECEIVED_STATUS_VALUE = "Received"
 SUCCESS_STATUS_VALUE = "Success"
@@ -538,6 +540,7 @@ def is_collection_received(
         item (dict): The item returned from dynamo db
     """
     collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
+    collection_files_exported_count = item[FILES_EXPORTED_DDB_FIELD_NAME]["N"]
     collection_files_received_count = item[FILES_RECEIVED_DDB_FIELD_NAME]["N"]
     collection_files_sent_count = item[FILES_SENT_DDB_FIELD_NAME]["N"]
 
@@ -548,8 +551,10 @@ def is_collection_received(
     )
 
     is_received = (
-        collection_status == SENT_STATUS_VALUE
-        and collection_files_received_count == collection_files_sent_count
+        collection_status in [EXPORTED_STATUS_VALUE, SENT_STATUS_VALUE]
+        and collection_files_received_count
+        == collection_files_sent_count
+        == collection_files_exported_count
     )
 
     logger.info(
