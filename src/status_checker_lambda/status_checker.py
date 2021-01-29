@@ -552,7 +552,9 @@ def is_collection_received(
 
     is_received = (
         collection_status in [EXPORTED_STATUS_VALUE, SENT_STATUS_VALUE]
-        and collection_files_received_count == collection_files_sent_count == collection_files_exported_count
+        and collection_files_received_count
+        == collection_files_sent_count
+        == collection_files_exported_count
     )
 
     logger.info(
