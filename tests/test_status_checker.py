@@ -1313,15 +1313,9 @@ class TestReplayer(unittest.TestCase):
             "slack_username": "Crown Export Poller",
             "title_text": "Fulls - test status",
             "custom_elements": [
-                {
-                    "key": "Export date",
-                    "value": EXPORT_DATE
-                },
-                {
-                    "key": "Correlation Id",
-                    "value": CORRELATION_ID_1
-                },
-            ]
+                {"key": "Export date", "value": EXPORT_DATE},
+                {"key": "Correlation Id", "value": CORRELATION_ID_1},
+            ],
         }
         actual_payload = status_checker.generate_monitoring_message_payload(
             SNAPSHOT_TYPE,

@@ -163,15 +163,9 @@ def generate_monitoring_message_payload(
         "slack_username": "Crown Export Poller",
         "title_text": f"{snapshot_type.title()} - {status}",
         "custom_elements": [
-            {
-                "key": "Export date",
-                "value": export_date
-            },
-            {
-                "key": "Correlation Id",
-                "value": correlation_id
-            },
-        ]
+            {"key": "Export date", "value": export_date},
+            {"key": "Correlation Id", "value": correlation_id},
+        ],
     }
 
     dumped_payload = get_escaped_json_string(payload)
