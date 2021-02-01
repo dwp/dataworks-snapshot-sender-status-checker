@@ -371,6 +371,7 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SNAPSHOT_TYPE,
+            EXPORT_DATE,
             SNS_TOPIC_ARN,
             "NOT_SET",
         )
@@ -420,6 +421,7 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SNAPSHOT_TYPE,
+            EXPORT_DATE,
             SNS_TOPIC_ARN,
             TEST_FILE_NAME,
         )
@@ -606,14 +608,17 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [RECEIVED_STATUS],
+            [RECEIVED_STATUS, SUCCESS_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
             SNAPSHOT_TYPE,
             "All collections received by NiFi",
+            EXPORT_DATE,
+            CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
 
@@ -766,8 +771,9 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [RECEIVED_STATUS],
+            [RECEIVED_STATUS, SUCCESS_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -918,8 +924,9 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.assert_called_once_with(
             all_collections_result,
-            [RECEIVED_STATUS],
+            [RECEIVED_STATUS, SUCCESS_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1078,6 +1085,7 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SNAPSHOT_TYPE,
+            EXPORT_DATE,
             SNS_TOPIC_ARN,
             TEST_FILE_NAME,
         )
@@ -1115,12 +1123,15 @@ class TestReplayer(unittest.TestCase):
             all_collections_result,
             [SUCCESS_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
         generate_monitoring_message_payload_mock.assert_called_once_with(
             SNAPSHOT_TYPE,
             "All collections successful",
+            EXPORT_DATE,
+            CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
 
@@ -1185,6 +1196,7 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SNAPSHOT_TYPE,
+            EXPORT_DATE,
             SNS_TOPIC_ARN,
             TEST_FILE_NAME,
         )
@@ -1222,6 +1234,7 @@ class TestReplayer(unittest.TestCase):
             all_collections_result,
             [SUCCESS_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1268,6 +1281,7 @@ class TestReplayer(unittest.TestCase):
             CORRELATION_ID_1,
             COLLECTION_1,
             SNAPSHOT_TYPE,
+            EXPORT_DATE,
             SNS_TOPIC_ARN,
             TEST_FILE_NAME,
         )
@@ -1298,10 +1312,16 @@ class TestReplayer(unittest.TestCase):
             "notification_type": "Information",
             "slack_username": "Crown Export Poller",
             "title_text": "Fulls - test status",
+            "custom_elements": [
+                {"key": "Export date", "value": EXPORT_DATE},
+                {"key": "Correlation Id", "value": CORRELATION_ID_1},
+            ],
         }
         actual_payload = status_checker.generate_monitoring_message_payload(
             SNAPSHOT_TYPE,
             MESSAGE_STATUS,
+            EXPORT_DATE,
+            CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
         self.assertEqual(expected_payload, actual_payload)
@@ -1365,6 +1385,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [EXPORTED_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1389,6 +1410,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [EXPORTED_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1409,6 +1431,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1433,6 +1456,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1453,6 +1477,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [SENT_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1477,6 +1502,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [SENT_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1497,6 +1523,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1521,6 +1548,7 @@ class TestReplayer(unittest.TestCase):
             response_items,
             [EXPORTED_STATUS, SENT_STATUS],
             SNAPSHOT_TYPE,
+            COLLECTION_1,
             TEST_FILE_NAME,
         )
 
@@ -1622,6 +1650,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 1},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 1},
@@ -1641,6 +1670,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 1},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 1},
@@ -1660,6 +1690,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 2},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 1},
@@ -1679,6 +1710,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 1},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 2},
@@ -1698,6 +1730,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 1},
             "FilesReceived": {"N": 2},
             "FilesSent": {"N": 1},
@@ -1717,6 +1750,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 2},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 2},
@@ -1736,6 +1770,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": EXPORTING_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesExported": {"N": 1},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 1},
@@ -1756,6 +1791,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
             "FilesReceived": 1,
             "FilesSent": 1,
         }
@@ -1774,6 +1810,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": RECEIVED_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
         }
 
         actual = status_checker.is_collection_success(
@@ -1790,6 +1827,7 @@ class TestReplayer(unittest.TestCase):
     ):
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
         }
 
         actual = status_checker.is_collection_success(

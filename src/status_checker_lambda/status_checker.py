@@ -143,6 +143,8 @@ def get_parameters():
 def generate_monitoring_message_payload(
     snapshot_type,
     status,
+    export_date,
+    correlation_id,
     file_name,
 ):
     """Generates a payload for a monitoring message.
@@ -150,7 +152,9 @@ def generate_monitoring_message_payload(
     Arguments:
         snapshot_type (string): full or incremental
         status (string): the free text status for the monitoring event message
-        file_name: file name for logging purposes
+        file_name: (string) file name for logging purposes
+        correlation_id: (string) the correlation id of this run
+        export_date (string): the date of the export
 
     """
     payload = {
@@ -158,6 +162,10 @@ def generate_monitoring_message_payload(
         "notification_type": "Information",
         "slack_username": "Crown Export Poller",
         "title_text": f"{snapshot_type.title()} - {status}",
+        "custom_elements": [
+            {"key": "Export date", "value": export_date},
+            {"key": "Correlation Id", "value": correlation_id},
+        ],
     }
 
     dumped_payload = get_escaped_json_string(payload)
@@ -265,6 +273,7 @@ def check_completion_status(
     response_items,
     statuses,
     snapshot_type,
+    current_collection_name,
     file_name,
 ):
     """Checks if all the collections are either exported or sent.
@@ -273,19 +282,21 @@ def check_completion_status(
         response_items: response of the  dynamo query
         statuses: an array of valid statuses equalling completion
         snapshot_type: incrementals or fulls
+        current_collection_name: the current collection for logging purposes
         file_name: file name for logging purposes
 
     """
     logger.info(
         f'Checking completion status of all collections", "response_items": "{response_items}", '
-        + f'"completed_statuses": "{statuses}", "snapshot_type": "{snapshot_type}, "file_name": "{file_name}'
+        + f'"completed_statuses": "{statuses}", "snapshot_type": "{snapshot_type}, '
+        + f'"current_collection_name": "{current_collection_name}, "file_name": "{file_name}'
     )
 
     is_completed = True
     for item in response_items:
         collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
         collection_name = item[COLLECTION_NAME_DDB_FIELD_NAME]["S"]
-        logger.info(
+        logger.debug(
             "collection_status of collection %s is %s",
             collection_name,
             collection_status,
@@ -543,11 +554,13 @@ def is_collection_received(
     collection_files_exported_count = item[FILES_EXPORTED_DDB_FIELD_NAME]["N"]
     collection_files_received_count = item[FILES_RECEIVED_DDB_FIELD_NAME]["N"]
     collection_files_sent_count = item[FILES_SENT_DDB_FIELD_NAME]["N"]
+    collection_name = item[COLLECTION_NAME_DDB_FIELD_NAME]["S"]
 
     logger.info(
         f'Checking if collection has been received", "collection_status": "{collection_status}", '
-        + f'"collection_files_received_count": "{collection_files_received_count}", "collection_files_sent_count": '
-        + f'"{collection_files_sent_count}", "file_name": "{file_name}'
+        + f'"collection_files_received_count": "{collection_files_received_count}", '
+        + f'"collection_files_sent_count": "{collection_files_sent_count}", '
+        + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
     )
 
     is_received = (
@@ -560,7 +573,8 @@ def is_collection_received(
     logger.info(
         f'Checked if collection has been received", "is_received": "{is_received}", "collection_status": '
         + f'"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
-        + f'"collection_files_sent_count": "{collection_files_sent_count}", "file_name": "{file_name}'
+        + f'"collection_files_sent_count": "{collection_files_sent_count}", '
+        + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
     )
 
     return is_received
@@ -577,16 +591,19 @@ def is_collection_success(
         file_name: file name for logging purposes
     """
     collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
+    collection_name = item[COLLECTION_NAME_DDB_FIELD_NAME]["S"]
 
     logger.info(
-        f'Checking if collection has been successful", "file_name": "{file_name}", "collection_status": "{collection_status}'
+        f'Checking if collection has been successful", "file_name": "{file_name}", '
+        + f'"collection_name": "{collection_name}", "collection_status": "{collection_status}'
     )
 
     is_success = collection_status == RECEIVED_STATUS_VALUE
 
     logger.info(
-        f'Checked if collection has been successful", "file_name": "{file_name}", "is_success": "{is_success}", "collection_status": '
-        + f'"{collection_status}"'
+        f'Checked if collection has been successful", "file_name": "{file_name}", '
+        + f'"is_success": "{is_success}", "collection_name": "{collection_name}", '
+        + f'"collection_status": "{collection_status}"'
     )
 
     return is_success
@@ -643,6 +660,7 @@ def process_success_file_message(
     correlation_id,
     collection_name,
     snapshot_type,
+    export_date,
     sns_topic_arn,
     file_name,
 ):
@@ -655,12 +673,15 @@ def process_success_file_message(
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
         snapshot_type (string): Full or incremental
+        export_date (string): The export date
         sns_topic_arn (string): The arn of the SNS topic to send to
         file_name (string): For logging purposes
     """
     logger.info(
         f'Processing success file message", "file_name": "{file_name}", '
-        + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+        + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+        + f'"file_name": "{file_name}'
     )
 
     current_collection = get_current_collection(
@@ -689,11 +710,17 @@ def process_success_file_message(
         )
 
         if check_completion_status(
-            all_statuses, [SUCCESS_STATUS_VALUE], snapshot_type, file_name
+            all_statuses,
+            [SUCCESS_STATUS_VALUE],
+            snapshot_type,
+            collection_name,
+            file_name,
         ):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type,
                 "All collections successful",
+                export_date,
+                correlation_id,
                 file_name,
             )
             send_sns_message(
@@ -705,12 +732,14 @@ def process_success_file_message(
         else:
             logger.info(
                 f'All collections have not been successful so no further processing", "file_name": "{file_name}", '
-                + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+                + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+                + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
             )
     else:
         logger.info(
             f'Collection has not been successful so no further processing", "file_name": "{file_name}", '
-            + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+            + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+            + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
         )
 
 
@@ -748,7 +777,9 @@ def process_normal_file_message(
     """
     logger.info(
         f'Processing normal file message", "file_name": "{file_name}", '
-        + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+        + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+        + f'"file_name": "{file_name}'
     )
 
     updated_collection = update_files_received_for_collection(
@@ -792,11 +823,17 @@ def process_normal_file_message(
             file_name,
         )
         if check_completion_status(
-            all_statuses, [RECEIVED_STATUS_VALUE], snapshot_type, file_name
+            all_statuses,
+            [RECEIVED_STATUS_VALUE, SUCCESS_STATUS_VALUE],
+            snapshot_type,
+            collection_name,
+            file_name,
         ):
             sns_payload = generate_monitoring_message_payload(
                 snapshot_type,
                 "All collections received by NiFi",
+                export_date,
+                correlation_id,
                 file_name,
             )
             send_sns_message(
@@ -808,12 +845,14 @@ def process_normal_file_message(
         else:
             logger.info(
                 f'All collections have not been fully received so no further processing", "file_name": "{file_name}", '
-                + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+                + f'"correlation_id": "{correlation_id}", "export_date": "{export_date}", "snapshot_type": "{snapshot_type}", '
+                + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
             )
     else:
         logger.info(
             f'Collection has not been fully received so no further processing", "file_name": "{file_name}", '
-            + f'"correlation_id": "{correlation_id}", "file_name": "{file_name}'
+            + f'"correlation_id": "{correlation_id}", "export_date": "{export_date}", "snapshot_type": "{snapshot_type}", '
+            + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
         )
 
 
@@ -880,6 +919,7 @@ def process_message(
             correlation_id,
             collection_name,
             snapshot_type,
+            export_date,
             sns_topic_arn,
             file_name,
         )
