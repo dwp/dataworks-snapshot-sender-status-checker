@@ -1704,7 +1704,7 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_is_collection_received_returns_false_when_more_files_sent(
+    def test_is_collection_received_returns_true_when_more_files_sent(
         self,
         mock_logger,
     ):
@@ -1721,7 +1721,7 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
         )
 
-        self.assertFalse(actual)
+        self.assertTrue(actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_false_when_more_files_received(
@@ -1774,26 +1774,6 @@ class TestReplayer(unittest.TestCase):
             "FilesExported": {"N": 1},
             "FilesReceived": {"N": 1},
             "FilesSent": {"N": 1},
-        }
-
-        actual = status_checker.is_collection_received(
-            event,
-            TEST_FILE_NAME,
-        )
-
-        self.assertFalse(actual)
-
-    @mock.patch("status_checker_lambda.status_checker.logger")
-    @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_update_status_for_collection_sends_right_message(
-        self,
-        mock_logger,
-    ):
-        event = {
-            "CollectionStatus": {"S": EXPORTED_STATUS},
-            "CollectionName": {"S": COLLECTION_1},
-            "FilesReceived": 1,
-            "FilesSent": 1,
         }
 
         actual = status_checker.is_collection_received(
