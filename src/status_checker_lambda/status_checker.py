@@ -596,7 +596,7 @@ def is_collection_success(
         + f'"collection_name": "{collection_name}", "collection_status": "{collection_status}'
     )
 
-    is_success = collection_status == RECEIVED_STATUS_VALUE
+    is_success = (collection_status in [SENT_STATUS_VALUE, RECEIVED_STATUS_VALUE]
 
     logger.info(
         f'Checked if collection has been successful", "file_name": "{file_name}", '

@@ -1784,7 +1784,7 @@ class TestReplayer(unittest.TestCase):
         self.assertFalse(actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_is_collection_success_returns_true(
+    def test_is_collection_success_returns_true_for_received_collection(
         self,
         mock_logger,
     ):
@@ -1801,12 +1801,29 @@ class TestReplayer(unittest.TestCase):
         self.assertTrue(actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_is_collection_success_returns_false(
+    def test_is_collection_success_returns_true_for_sent_collection(
         self,
         mock_logger,
     ):
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
+            "CollectionName": {"S": COLLECTION_1},
+        }
+
+        actual = status_checker.is_collection_success(
+            event,
+            TEST_FILE_NAME,
+        )
+
+        self.assertTrue(actual)
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_is_collection_success_returns_false(
+        self,
+        mock_logger,
+    ):
+        event = {
+            "CollectionStatus": {"S": EXPORTED_STATUS},
             "CollectionName": {"S": COLLECTION_1},
         }
 
