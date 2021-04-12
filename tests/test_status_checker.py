@@ -539,7 +539,7 @@ class TestReplayer(unittest.TestCase):
         expected_payload_sns = {
             "severity": "Critical",
             "notification_type": "Information",
-            "slack_username": "Crown Export Poller",
+            "slack_username": "Snapshot sender",
             "title_text": "Fulls - test status",
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
@@ -1073,7 +1073,7 @@ class TestReplayer(unittest.TestCase):
         expected_payload_sns = {
             "severity": "Critical",
             "notification_type": "Information",
-            "slack_username": "Crown Export Poller",
+            "slack_username": "Snapshot sender",
             "title_text": "Fulls - test status",
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
@@ -1310,7 +1310,7 @@ class TestReplayer(unittest.TestCase):
         expected_payload = {
             "severity": "Critical",
             "notification_type": "Information",
-            "slack_username": "Crown Export Poller",
+            "slack_username": "Snapshot sender",
             "title_text": "Fulls - test status",
             "custom_elements": [
                 {"key": "Export date", "value": EXPORT_DATE},
