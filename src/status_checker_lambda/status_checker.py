@@ -160,7 +160,7 @@ def generate_monitoring_message_payload(
     payload = {
         "severity": "Critical",
         "notification_type": "Information",
-        "slack_username": "HTME",
+        "slack_username": "Snapshot sender",
         "title_text": f"{snapshot_type.title()} - {status}",
         "custom_elements": [
             {"key": "Export date", "value": export_date},
