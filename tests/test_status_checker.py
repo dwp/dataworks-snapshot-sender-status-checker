@@ -37,7 +37,7 @@ SNAPSHOT_TYPE = "fulls"
 MESSAGE_STATUS = "test status"
 TEST_FILE_NAME = "test_file"
 SLACK_USERNAME = "Snapshot Sender"
-PUSHGATEWAY_HOSTNAME = "http://test-host"
+PUSHGATEWAY_HOSTNAME = "test-host"
 PUSHGATEWAY_PORT = 9090
 REQUEST_ID_FIELD_NAME = "awsRequestId"
 REQUEST_ID = "awsRequestTestId"
@@ -242,7 +242,7 @@ class TestReplayer(unittest.TestCase):
             EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
         }
 
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             status_checker.handler(event, None)
 
         get_parameters_mock.assert_called_once()
