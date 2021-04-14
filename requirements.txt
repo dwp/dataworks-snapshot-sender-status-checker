@@ -1,0 +1,5 @@
+prometheus-client
+mysql-connector-python==8.0.20
+requests
+aws-requests-auth
+cryptography
