@@ -205,7 +205,9 @@ def push_metrics(
         + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
     )
 
-    prometheus_client.push_to_gateway(f"{host_name}:{port}", job=f"{unique_request_id}", registry=registry)
+    prometheus_client.push_to_gateway(
+        f"{host_name}:{port}", job=f"{unique_request_id}", registry=registry
+    )
 
     logger.info(
         f'Pushed metrics to the push gateway", "host_name": "{host_name}", '

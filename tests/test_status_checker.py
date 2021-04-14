@@ -2559,9 +2559,9 @@ class TestReplayer(unittest.TestCase):
         )
 
         prometheus_client_mock.push_to_gateway.assert_called_once_with(
-            f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}", 
-            job=CORRELATION_ID_1, 
-            registry=registry
+            f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}",
+            job=CORRELATION_ID_1,
+            registry=registry,
         )
 
 
