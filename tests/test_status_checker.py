@@ -36,6 +36,7 @@ EXPORT_DATE = "2021-01-01"
 SNAPSHOT_TYPE = "fulls"
 MESSAGE_STATUS = "test status"
 TEST_FILE_NAME = "test_file"
+SLACK_USERNAME = "Snapshot Sender"
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_TABLE_NAME
@@ -455,7 +456,7 @@ class TestReplayer(unittest.TestCase):
         sns_client_mock = mock.MagicMock()
 
         message = {
-            IS_SUCCESS_FILE_FIELD_NAME: "true",
+            IS_SUCCESS_FILE_FIELD_NAME: "TRUE",
         }
 
         status_checker.process_message(
@@ -561,7 +562,7 @@ class TestReplayer(unittest.TestCase):
         expected_payload_sns = {
             "severity": "Critical",
             "notification_type": "Information",
-            "slack_username": "Snapshot Sender",
+            "slack_username": SLACK_USERNAME,
             "title_text": "Fulls - test status",
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
@@ -1111,7 +1112,7 @@ class TestReplayer(unittest.TestCase):
         expected_payload_sns = {
             "severity": "Critical",
             "notification_type": "Information",
-            "slack_username": "Snapshot Sender",
+            "slack_username": SLACK_USERNAME,
             "title_text": "Fulls - test status",
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
@@ -1360,7 +1361,7 @@ class TestReplayer(unittest.TestCase):
         expected_payload = {
             "severity": "Critical",
             "notification_type": "Information",
-            "slack_username": "Snapshot Sender",
+            "slack_username": SLACK_USERNAME,
             "title_text": "Fulls - test status",
             "custom_elements": [
                 {"key": "Export date", "value": EXPORT_DATE},
