@@ -6,6 +6,8 @@ import sys
 import socket
 import json
 
+from prometheus_client import start_http_server, Summary, Counter
+
 CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
 SNAPSHOT_TYPE_FIELD_NAME = "snapshot_type"
@@ -38,6 +40,28 @@ required_message_keys = [
 
 args = None
 logger = None
+
+METRIC_LABEL_NAMES = [
+    "correlation_id",
+    "collection_name",
+    "export_date",
+    "snapshot_type",
+    "file_name",
+]
+MESSAGE_PROCESSING_TIME = Summary(
+    "snapshot_sender_status_checker_message_processing_time",
+    "The time for snapshot sender process checker to process a message",
+)
+COUNTER_RECEIVED_COLLECTIONS = Counter(
+    "snapshot_sender_status_checker_collections_received",
+    "The number of received collections",
+    METRIC_LABEL_NAMES,
+)
+COUNTER_SUCCESSFUL_COLLECTIONS = Counter(
+    "snapshot_sender_status_checker_collections_successful",
+    "The number of successful collections",
+    METRIC_LABEL_NAMES,
+)
 
 
 def setup_logging(logger_level):
@@ -160,7 +184,7 @@ def generate_monitoring_message_payload(
     payload = {
         "severity": "Critical",
         "notification_type": "Information",
-        "slack_username": "Snapshot sender",
+        "slack_username": "Snapshot Sender",
         "title_text": f"{snapshot_type.title()} - {status}",
         "custom_elements": [
             {"key": "Export date", "value": export_date},
@@ -425,6 +449,40 @@ def update_files_received_for_collection(
     return response[ATTRIBUTES_FIELD_NAME]
 
 
+def add_label_values_to_metric(
+    metric,
+    correlation_id,
+    collection_name,
+    export_date,
+    snapshot_type,
+    file_name,
+):
+    """Adds all the relevant labels to the metrics.
+
+    Arguments:
+        metric (object): The metric to add labels to (must have been initialised with the labels)
+        correlation_id (string): String value of CorrelationId column
+        collection_name (string): String value of CollectionName column
+        export_date (string): The date of the export
+        snapshot_type (string): Will be full or incremental
+        file_name (string): The file name
+    """
+    logger.info(
+        f'Adding label values to metric", "metric": "{metric}", "snapshot_type": "{snapshot_type}", "correlation_id": '
+        + f'"{correlation_id}", "collection_name": "{collection_name}",  "export_date": "{export_date}", "file_name": "{file_name}'
+    )
+
+    metric.labels(
+        correlation_id=correlation_id,
+        collection_name=collection_name,
+        export_date=export_date,
+        snapshot_type=snapshot_type,
+        file_name=file_name,
+    )
+
+    return metric
+
+
 def update_status_for_collection(
     dynamodb_client,
     ddb_status_table,
@@ -542,13 +600,21 @@ def check_for_mandatory_keys(
 
 def is_collection_received(
     item,
+    correlation_id,
+    export_date,
+    snapshot_type,
     file_name,
+    counter,
 ):
     """Checks if a collection has been fully received.
-        file_name: file name for logging purposes
 
     Arguments:
         item (dict): The item returned from dynamo db
+        correlation_id (string): String value of CorrelationId column
+        snapshot_type (string): Full or incremental
+        export_date (string): The export date
+        file_name (string): For logging purposes
+        counter (object): The metrics counter to increment
     """
     collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
     collection_files_exported_count = item[FILES_EXPORTED_DDB_FIELD_NAME]["N"]
@@ -560,7 +626,9 @@ def is_collection_received(
         f'Checking if collection has been received", "collection_status": "{collection_status}", '
         + f'"collection_files_received_count": "{collection_files_received_count}", '
         + f'"collection_files_sent_count": "{collection_files_sent_count}", '
-        + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
+        + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+        + f'"file_name": "{file_name}'
     )
 
     is_received = (
@@ -572,37 +640,94 @@ def is_collection_received(
         f'Checked if collection has been received", "is_received": "{is_received}", "collection_status": '
         + f'"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
         + f'"collection_files_sent_count": "{collection_files_sent_count}", '
-        + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
+        + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+        + f'"file_name": "{file_name}'
     )
+
+    if is_received:
+        counter_with_labels = add_label_values_to_metric(
+            counter,
+            correlation_id,
+            collection_name,
+            export_date,
+            snapshot_type,
+            file_name,
+        )
+
+        logger.info(
+            f'Incrementing received collections counter", "is_received": "{is_received}", "collection_status": '
+            + f'"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
+            + f'"collection_files_sent_count": "{collection_files_sent_count}", '
+            + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+            + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+            + f'"file_name": "{file_name}'
+        )
+
+        counter_with_labels.inc()
 
     return is_received
 
 
 def is_collection_success(
     item,
+    correlation_id,
+    export_date,
+    snapshot_type,
     file_name,
+    counter,
 ):
     """Checks if a collection is successful.
 
     Arguments:
         item (dict): The item returned from dynamo db
-        file_name: file name for logging purposes
+        correlation_id (string): String value of CorrelationId column=
+        snapshot_type (string): Full or incremental
+        export_date (string): The export date
+        file_name (string): For logging purposes
+        counter (object): The metrics counter to increment
     """
     collection_status = item[COLLECTION_STATUS_DDB_FIELD_NAME]["S"]
     collection_name = item[COLLECTION_NAME_DDB_FIELD_NAME]["S"]
 
     logger.info(
-        f'Checking if collection has been successful", "file_name": "{file_name}", '
-        + f'"collection_name": "{collection_name}", "collection_status": "{collection_status}'
+        'Checking if collection has been successful", '
+        + f'"collection_status": "{collection_status}", '
+        + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+        + f'"file_name": "{file_name}'
     )
 
     is_success = collection_status in [SENT_STATUS_VALUE, RECEIVED_STATUS_VALUE]
 
     logger.info(
         f'Checked if collection has been successful", "file_name": "{file_name}", '
-        + f'"is_success": "{is_success}", "collection_name": "{collection_name}", '
-        + f'"collection_status": "{collection_status}"'
+        + f'"is_success": "{is_success}", '
+        + f'"collection_status": "{collection_status}, '
+        + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+        + f'"file_name": "{file_name}'
     )
+
+    if is_success:
+        counter_with_labels = add_label_values_to_metric(
+            counter,
+            correlation_id,
+            collection_name,
+            export_date,
+            snapshot_type,
+            file_name,
+        )
+
+        logger.info(
+            f'Incrementing successful collections counter", "is_success": "{is_success}", "collection_status": '
+            + f'"collection_status": "{collection_status}", '
+            + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
+            + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
+            + f'"file_name": "{file_name}'
+        )
+
+        counter_with_labels.inc()
 
     return is_success
 
@@ -690,7 +815,16 @@ def process_success_file_message(
         file_name,
     )
 
-    if is_collection_success(current_collection, file_name):
+    success_result = is_collection_success(
+        current_collection,
+        correlation_id,
+        export_date,
+        snapshot_type,
+        file_name,
+        COUNTER_SUCCESSFUL_COLLECTIONS,
+    )
+
+    if success_result:
         update_status_for_collection(
             dynamodb_client,
             ddb_table,
@@ -788,7 +922,16 @@ def process_normal_file_message(
         file_name,
     )
 
-    if is_collection_received(updated_collection, file_name):
+    received_result = is_collection_received(
+        updated_collection,
+        correlation_id,
+        export_date,
+        snapshot_type,
+        file_name,
+        COUNTER_RECEIVED_COLLECTIONS,
+    )
+
+    if received_result:
         update_status_for_collection(
             dynamodb_client,
             ddb_table,
@@ -842,18 +985,19 @@ def process_normal_file_message(
             )
         else:
             logger.info(
-                f'All collections have not been fully received so no further processing", "file_name": "{file_name}", '
+                'All collections have not been fully received so no further processing", '
                 + f'"correlation_id": "{correlation_id}", "export_date": "{export_date}", "snapshot_type": "{snapshot_type}", '
                 + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
             )
     else:
         logger.info(
-            f'Collection has not been fully received so no further processing", "file_name": "{file_name}", '
+            'Collection has not been fully received so no further processing", '
             + f'"correlation_id": "{correlation_id}", "export_date": "{export_date}", "snapshot_type": "{snapshot_type}", '
             + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
         )
 
 
+@MESSAGE_PROCESSING_TIME.time()
 def process_message(
     message,
     dynamodb_client,
@@ -862,6 +1006,11 @@ def process_message(
     ddb_table,
     sns_topic_arn,
     sqs_queue_url,
+    correlation_id,
+    collection_name,
+    snapshot_type,
+    export_date,
+    file_name,
 ):
     """Processes an individual message.
 
@@ -873,22 +1022,17 @@ def process_message(
         ddb_table (string): The ddb table name
         sns_topic_arn (string): The arn of the SNS topic to send to
         sqs_queue_url (string): The url of the SQS queue to send to
+        correlation_id (string): String value of CorrelationId column
+        collection_name (string): String value of CollectionName column
+        snapshot_type (string): Full or incremental
+        export_date (string): The export date
+        file_name (string): For logging purposes
     """
     dumped_message = get_escaped_json_string(message)
-    logger.info(f'Processing new message", "message": "{dumped_message}"')
-
-    if not check_for_mandatory_keys(message):
-        return
-
-    collection_name = message[COLLECTION_NAME_FIELD_NAME]
-    correlation_id = message[CORRELATION_ID_FIELD_NAME]
-    snapshot_type = message[SNAPSHOT_TYPE_FIELD_NAME]
-    export_date = message[EXPORT_DATE_FIELD_NAME]
-
-    file_name = (
-        message[FILE_NAME_FIELD_NAME]
-        if FILE_NAME_FIELD_NAME in message and message[FILE_NAME_FIELD_NAME] is not None
-        else "NOT_SET"
+    logger.info(
+        f'Processing new message", "message": "{dumped_message}", "file_name": "{file_name}", '
+        + f'"correlation_id": "{correlation_id}", "export_date": "{export_date}", "snapshot_type": "{snapshot_type}", '
+        + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
     )
 
     is_success_file = (
@@ -939,6 +1083,59 @@ def process_message(
         )
 
 
+def handle_message(
+    message,
+    dynamodb_client,
+    sqs_client,
+    sns_client,
+    ddb_table,
+    sns_topic_arn,
+    sqs_queue_url,
+):
+    """Handles an individual message.
+
+    Arguments:
+        message (dict): The message to process
+        dynamodb_client (object): The boto3 client for dynamo db
+        sqs_client (object): The boto3 client for sqs
+        sns_client (object): The boto3 client for sns
+        ddb_table (string): The ddb table name
+        sns_topic_arn (string): The arn of the SNS topic to send to
+        sqs_queue_url (string): The url of the SQS queue to send to
+    """
+    dumped_message = get_escaped_json_string(message)
+    logger.info(f'Handling new message", "message": "{dumped_message}"')
+
+    if not check_for_mandatory_keys(message):
+        return
+
+    collection_name = message[COLLECTION_NAME_FIELD_NAME]
+    correlation_id = message[CORRELATION_ID_FIELD_NAME]
+    snapshot_type = message[SNAPSHOT_TYPE_FIELD_NAME]
+    export_date = message[EXPORT_DATE_FIELD_NAME]
+
+    file_name = (
+        message[FILE_NAME_FIELD_NAME]
+        if FILE_NAME_FIELD_NAME in message and message[FILE_NAME_FIELD_NAME] is not None
+        else "NOT_SET"
+    )
+
+    process_message(
+        message,
+        dynamodb_client,
+        sqs_client,
+        sns_client,
+        ddb_table,
+        sns_topic_arn,
+        sqs_queue_url,
+        correlation_id,
+        collection_name,
+        snapshot_type,
+        export_date,
+        file_name,
+    )
+
+
 def handler(event, context):
     global args
     global logger
@@ -956,7 +1153,7 @@ def handler(event, context):
     messages = extract_messages(event)
 
     for message in messages:
-        process_message(
+        handle_message(
             message,
             dynamodb_client,
             sqs_client,
@@ -977,6 +1174,9 @@ if __name__ == "__main__":
         )
         logger.info(os.getcwd())
         json_content = json.loads(open("resources/event.json", "r").read())
+
+        start_http_server(8000)
+
         handler(json_content, None)
     except Exception as err:
         logger.error(f'Exception occurred for invocation", "error_message": {err}')
