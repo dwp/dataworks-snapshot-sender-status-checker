@@ -463,7 +463,6 @@ def add_label_values_to_metric(
         metric (object): The metric to add labels to (must have been initialised with the labels)
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
-        collection_status (string): The status to set
         export_date (string): The date of the export
         snapshot_type (string): Will be full or incremental
         file_name (string): The file name
