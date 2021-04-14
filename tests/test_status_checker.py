@@ -213,6 +213,52 @@ class TestReplayer(unittest.TestCase):
             mock.ANY,
         )
 
+
+class TestReplayer(unittest.TestCase):
+    @mock.patch("status_checker_lambda.status_checker.push_metrics")
+    @mock.patch("status_checker_lambda.status_checker.handle_message")
+    @mock.patch("status_checker_lambda.status_checker.extract_messages")
+    @mock.patch("status_checker_lambda.status_checker.setup_logging")
+    @mock.patch("status_checker_lambda.status_checker.get_parameters")
+    @mock.patch("status_checker_lambda.status_checker.get_client")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_handler_pushes_metrics_even_when_error(
+        self,
+        mock_logger,
+        get_client_mock,
+        get_parameters_mock,
+        setup_logging_mock,
+        extract_messages_mock,
+        handle_message_mock,
+        push_metrics_mock,
+    ):
+        get_client_mock.side_effect = Exception("Test")
+        get_parameters_mock.return_value = args
+
+        event = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+        }
+
+        with self.assertRaises(Exception) as context:
+            status_checker.handler(event, None)
+
+        get_parameters_mock.assert_called_once()
+        setup_logging_mock.assert_called_once()
+        get_client_mock.assert_called_once()
+
+        push_metrics_mock.assert_called_once_with(
+            mock.ANY,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            mock.ANY,
+        )
+
+        extract_messages_mock.assert_not_called()
+        handle_message_mock.assert_not_called()
+
     @mock.patch("status_checker_lambda.status_checker.process_message")
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
