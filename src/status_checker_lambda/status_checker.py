@@ -5,8 +5,8 @@ import os
 import sys
 import socket
 import json
-
-from prometheus_client import start_http_server, Summary, Counter
+import uuid
+import prometheus_client
 
 CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
@@ -41,6 +41,7 @@ required_message_keys = [
 args = None
 logger = None
 
+METRICS_REGISTRY = prometheus_client.CollectorRegistry()
 METRIC_LABEL_NAMES = [
     "correlation_id",
     "collection_name",
@@ -48,16 +49,16 @@ METRIC_LABEL_NAMES = [
     "snapshot_type",
     "file_name",
 ]
-MESSAGE_PROCESSING_TIME = Summary(
+MESSAGE_PROCESSING_TIME = prometheus_client.Summary(
     "snapshot_sender_status_checker_message_processing_time",
     "The time for snapshot sender process checker to process a message",
 )
-COUNTER_RECEIVED_COLLECTIONS = Counter(
+COUNTER_RECEIVED_COLLECTIONS = prometheus_client.Counter(
     "snapshot_sender_status_checker_collections_received",
     "The number of received collections",
     METRIC_LABEL_NAMES,
 )
-COUNTER_SUCCESSFUL_COLLECTIONS = Counter(
+COUNTER_SUCCESSFUL_COLLECTIONS = prometheus_client.Counter(
     "snapshot_sender_status_checker_collections_successful",
     "The number of successful collections",
     METRIC_LABEL_NAMES,
@@ -137,6 +138,14 @@ def get_parameters():
     if "LOG_LEVEL" in os.environ:
         _args.log_level = os.environ["LOG_LEVEL"]
 
+    if "PUSHGATEWAY_HOSTNAME" in os.environ:
+        _args.pushgateway_hostname = os.environ["PUSHGATEWAY_HOSTNAME"]
+
+    if "PUSHGATEWAY_PORT" in os.environ:
+        _args.pushgateway_port = os.environ["PUSHGATEWAY_HOSTNAME"]
+    else:
+        _args.pushgateway_port = 9091
+
     if "DYNAMO_DB_EXPORT_STATUS_TABLE_NAME" in os.environ:
         _args.dynamo_db_export_status_table_name = os.environ[
             "DYNAMO_DB_EXPORT_STATUS_TABLE_NAME"
@@ -162,6 +171,48 @@ def get_parameters():
         )
 
     return _args
+
+
+def push_metrics(
+    registry,
+    host_name,
+    port,
+    unique_request_id,
+):
+    """Pushes metrics to the push-gateway.
+
+    Arguments:
+        registry (object) the metrics registry to use
+        host_name (string) the host name for the push gateway
+        port (string) the post number for the push gateway
+        snapshot_type (string): full or incremental
+        collection_name (string): the collection name that has been received
+        file_name: (string) file name for logging purposes
+        correlation_id: (string) the correlation id of this run
+        export_date (string): the date of the export
+        unique_request_id (string): a unique id for this request
+
+    """
+    if not host_name:
+        logger.info(
+            f'Not pushing metrics to the push gateway due to no host name set", "host_name": "{host_name}", '
+            + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
+        )
+        return
+
+    logger.info(
+        f'Pushing metrics to the push gateway", "host_name": "{host_name}", '
+        + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
+    )
+
+    prometheus_client.push_to_gateway(
+        f"{host_name}:{port}", job=f"{unique_request_id}", registry=registry
+    )
+
+    logger.info(
+        f'Pushed metrics to the push gateway", "host_name": "{host_name}", '
+        + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
+    )
 
 
 def generate_monitoring_message_payload(
@@ -1146,21 +1197,44 @@ def handler(event, context):
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Processing new event", "event": "{dumped_event}"')
 
-    dynamodb_client = get_client("dynamodb")
-    sqs_client = get_client("sqs")
-    sns_client = get_client("sns")
+    try:
+        dynamodb_client = get_client("dynamodb")
+        sqs_client = get_client("sqs")
+        sns_client = get_client("sns")
 
-    messages = extract_messages(event)
+        messages = extract_messages(event)
 
-    for message in messages:
-        handle_message(
-            message,
-            dynamodb_client,
-            sqs_client,
-            sns_client,
-            args.dynamo_db_export_status_table_name,
-            args.monitoring_sns_topic_arn,
-            args.export_state_sqs_queue_url,
+        for message in messages:
+            handle_message(
+                message,
+                dynamodb_client,
+                sqs_client,
+                sns_client,
+                args.dynamo_db_export_status_table_name,
+                args.monitoring_sns_topic_arn,
+                args.export_state_sqs_queue_url,
+            )
+    finally:
+        unique_id = None
+
+        if "awsRequestId" in event and event["awsRequestId"]:
+            unique_id = event["awsRequestId"]
+            logger.warn(
+                'Using awsRequestId from event for metrics group", '
+                + f'"host_name": "{args.pushgateway_hostname}", "unique_request_id": "{unique_id}", "port": "{args.pushgateway_port}"'
+            )
+        else:
+            unique_id = uuid.uuid4()
+            logger.info(
+                'No awsRequestId or awsRequestId blank in event so could not use it for metrics group", '
+                + f'"host_name": "{args.pushgateway_hostname}", "generated_request_id": "{unique_id}", "port": "{args.pushgateway_port}"'
+            )
+
+        push_metrics(
+            METRICS_REGISTRY,
+            args.pushgateway_hostname,
+            args.pushgateway_port,
+            unique_id,
         )
 
 
@@ -1175,7 +1249,7 @@ if __name__ == "__main__":
         logger.info(os.getcwd())
         json_content = json.loads(open("resources/event.json", "r").read())
 
-        start_http_server(8000)
+        prometheus_client.start_http_server(8000)
 
         handler(json_content, None)
     except Exception as err:
