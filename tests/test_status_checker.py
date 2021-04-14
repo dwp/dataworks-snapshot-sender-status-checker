@@ -4,11 +4,11 @@ import unittest
 import pytest
 import argparse
 import json
+import prometheus_client
 
 from copy import deepcopy
 from unittest import mock
 from status_checker_lambda import status_checker
-from prometheus_client import Counter
 
 EXPORTING_STATUS = "Exporting"
 EXPORTED_STATUS = "Exported"
@@ -37,15 +37,22 @@ SNAPSHOT_TYPE = "fulls"
 MESSAGE_STATUS = "test status"
 TEST_FILE_NAME = "test_file"
 SLACK_USERNAME = "Snapshot Sender"
+PUSHGATEWAY_HOSTNAME = "http://test-host"
+PUSHGATEWAY_PORT = 9090
+REQUEST_ID_FIELD_NAME = "awsRequestId"
+REQUEST_ID = "awsRequestTestId"
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_TABLE_NAME
 args.monitoring_sns_topic_arn = SNS_TOPIC_ARN
 args.export_state_sqs_queue_url = SQS_QUEUE_URL
+args.pushgateway_hostname = PUSHGATEWAY_HOSTNAME
+args.pushgateway_port = PUSHGATEWAY_PORT
 args.log_level = "INFO"
 
 
 class TestReplayer(unittest.TestCase):
+    @mock.patch("status_checker_lambda.status_checker.push_metrics")
     @mock.patch("status_checker_lambda.status_checker.handle_message")
     @mock.patch("status_checker_lambda.status_checker.extract_messages")
     @mock.patch("status_checker_lambda.status_checker.setup_logging")
@@ -60,6 +67,89 @@ class TestReplayer(unittest.TestCase):
         setup_logging_mock,
         extract_messages_mock,
         handle_message_mock,
+        push_metrics_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+        get_client_mock_return_values = {
+            "dynamodb": dynamodb_client_mock,
+            "sqs": sqs_client_mock,
+            "sns": sns_client_mock,
+        }
+        get_client_mock.side_effect = get_client_mock_return_values.get
+
+        get_parameters_mock.return_value = args
+
+        extract_messages_mock.return_value = [
+            {"test1": "test_value1"},
+            {"test2": "test_value2"},
+        ]
+
+        event = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            REQUEST_ID_FIELD_NAME: REQUEST_ID,
+        }
+
+        status_checker.handler(event, None)
+
+        get_client_mock.assert_any_call("dynamodb")
+        get_client_mock.assert_any_call("sqs")
+        get_client_mock.assert_any_call("sns")
+
+        get_parameters_mock.assert_called_once()
+        setup_logging_mock.assert_called_once()
+
+        extract_messages_mock.assert_called_once_with(event)
+
+        self.assertEqual(handle_message_mock.call_count, 2)
+        handle_message_mock.assert_any_call(
+            {"test1": "test_value1"},
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+        handle_message_mock.assert_any_call(
+            {"test2": "test_value2"},
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+        )
+
+        push_metrics_mock.assert_called_once_with(
+            mock.ANY,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            REQUEST_ID,
+        )
+
+
+class TestReplayer(unittest.TestCase):
+    @mock.patch("status_checker_lambda.status_checker.push_metrics")
+    @mock.patch("status_checker_lambda.status_checker.handle_message")
+    @mock.patch("status_checker_lambda.status_checker.extract_messages")
+    @mock.patch("status_checker_lambda.status_checker.setup_logging")
+    @mock.patch("status_checker_lambda.status_checker.get_parameters")
+    @mock.patch("status_checker_lambda.status_checker.get_client")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_handler_gets_clients_and_processes_all_messages_with_no_request_id(
+        self,
+        mock_logger,
+        get_client_mock,
+        get_parameters_mock,
+        setup_logging_mock,
+        extract_messages_mock,
+        handle_message_mock,
+        push_metrics_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -114,6 +204,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+        )
+
+        push_metrics_mock.assert_called_once_with(
+            mock.ANY,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            mock.ANY,
         )
 
     @mock.patch("status_checker_lambda.status_checker.process_message")
@@ -2397,6 +2494,28 @@ class TestReplayer(unittest.TestCase):
             export_date=EXPORT_DATE,
             snapshot_type=SNAPSHOT_TYPE,
             file_name=TEST_FILE_NAME,
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.prometheus_client")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_push_metrics_sends_the_metrics(
+        self,
+        mock_logger,
+        prometheus_client_mock,
+    ):
+        registry = mock.MagicMock()
+
+        status_checker.push_metrics(
+            registry,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            CORRELATION_ID_1,
+        )
+
+        prometheus_client_mock.push_to_gateway.assert_called_once_with(
+            f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}", 
+            job=CORRELATION_ID_1, 
+            registry=registry
         )
 
 
