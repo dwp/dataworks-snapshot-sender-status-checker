@@ -168,10 +168,7 @@ class TestReplayer(unittest.TestCase):
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_handle_message_stops_when_missing_mandatory_keys(
-        self,
-        mock_logger,
-        check_for_mandatory_keys_mock,
-        process_message_mock
+        self, mock_logger, check_for_mandatory_keys_mock, process_message_mock
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()

@@ -41,7 +41,13 @@ required_message_keys = [
 args = None
 logger = None
 
-METRIC_LABEL_NAMES = ["correlation_id", "collection_name", "export_date", "snapshot_type", "file_name"]
+METRIC_LABEL_NAMES = [
+    "correlation_id",
+    "collection_name",
+    "export_date",
+    "snapshot_type",
+    "file_name",
+]
 MESSAGE_PROCESSING_TIME = Summary(
     "snapshot_sender_status_checker_message_processing_time",
     "The time for snapshot sender process checker to process a message",
