@@ -206,7 +206,10 @@ def push_metrics(
     )
 
     prometheus_client.pushadd_to_gateway(
-        gateway=f"{host_name}:{port}", job=job_name, grouping_key=correlation_id, registry=registry
+        gateway=f"{host_name}:{port}",
+        job=job_name,
+        grouping_key=correlation_id,
+        registry=registry,
     )
 
     logger.info(
