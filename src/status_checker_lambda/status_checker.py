@@ -51,18 +51,21 @@ METRIC_LABEL_NAMES = [
     "snapshot_type",
 ]
 MESSAGE_PROCESSING_TIME = prometheus_client.Summary(
-    "snapshot_sender_status_checker_message_processing_time",
-    "The time for snapshot sender process checker to process a message",
+    name="snapshot_sender_status_checker_message_processing_time",
+    documentation="The time for snapshot sender process checker to process a message",
+    registry=METRICS_REGISTRY,
 )
 COUNTER_RECEIVED_COLLECTIONS = prometheus_client.Counter(
-    "snapshot_sender_status_checker_collections_received",
-    "The number of received collections",
-    METRIC_LABEL_NAMES,
+    name="snapshot_sender_status_checker_collections_received",
+    documentation="The number of received collections",
+    labelnames=METRIC_LABEL_NAMES,
+    registry=METRICS_REGISTRY,
 )
 COUNTER_SUCCESSFUL_COLLECTIONS = prometheus_client.Counter(
-    "snapshot_sender_status_checker_collections_successful",
-    "The number of successful collections",
-    METRIC_LABEL_NAMES,
+    name="snapshot_sender_status_checker_collections_successful",
+    documentation="The number of successful collections",
+    labelnames=METRIC_LABEL_NAMES,
+    registry=METRICS_REGISTRY,
 )
 
 
