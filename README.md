@@ -97,3 +97,15 @@ The test may also be ran via `make unittest`.
 You should always ensure they work before making a pull request for your branch.
 
 If tox has an issue with Python version you have installed, you can specify such as `tox -e py38`.
+
+## Metrics
+
+This lambda sends metrics to a prometheus push gateway. The metrics are all created at the start with the relevant label names and are importantly assigned to a registry on creation.
+
+Then at the appropriate points in the code, the metrics are incremented or altered as appropriate and the label values are applied at that time.
+
+When processing a message finishes, the metrics are pushed to the push gateway, whether the processing was successful or not.
+
+This lambda is part of a full run of sending files tied together with a correlation id which is passed to the lambda. Therefore all metrics have the correlation id as a label. When they are pushed they are also grouped using this as a key. When the lambda decides the full run has completed (for this lambda this means all `collections` have been set to `Success` status), then the lambda waits for the scrape interval from the push gateway to allow the final metrics to be sent to prometheus and then deletes the grouped metrics from the push gateway.
+
+So for a full run, there may be hundreds of lambda invocations with the same correlation id and these all push_add (i.e. append) the metrics on the push gateway. Then only the last lambda invocation actually deletes the metrics from the push gateway.
