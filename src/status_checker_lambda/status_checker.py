@@ -6,6 +6,7 @@ import sys
 import socket
 import json
 import prometheus_client
+import time
 
 CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
@@ -40,6 +41,7 @@ required_message_keys = [
 args = None
 logger = None
 
+METRICS_SCRAPE_INTERVAL_SECONDS = 70
 METRICS_JOB_NAME = "snapshot_sender_status_checker"
 METRICS_REGISTRY = prometheus_client.CollectorRegistry()
 METRIC_LABEL_NAMES = [
@@ -218,6 +220,7 @@ def delete_metrics(
     port,
     job_name,
     correlation_id,
+    scrape_interval_seconds,
 ):
     """Deletes metrics from the push-gateway.
 
@@ -226,6 +229,7 @@ def delete_metrics(
         port (string) the post number for the push gateway
         job_name (string): a name for the metrics job
         correlation_id: (string) the correlation id of this run
+        scrape_interval_seconds: (int) the prometheus scrape interval in seconds
 
     """
     url = f"{host_name}:{port}"
@@ -236,6 +240,13 @@ def delete_metrics(
             + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
         )
         return
+
+    logger.info(
+        f'Sleeping to allow final metrics to be scraped", "host_name": "{host_name}", "scrape_interval_seconds": "{scrape_interval_seconds}", '
+        + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
+    )
+
+    time.sleep(scrape_interval_seconds)
 
     logger.info(
         f'Deleting metrics from the push gateway", "host_name": "{host_name}", '
@@ -1249,6 +1260,7 @@ def handle_message(
                 pushgateway_port,
                 METRICS_JOB_NAME,
                 correlation_id,
+                METRICS_SCRAPE_INTERVAL_SECONDS,
             )
 
 

@@ -258,6 +258,7 @@ class TestReplayer(unittest.TestCase):
             PUSHGATEWAY_PORT,
             METRICS_JOB_NAME,
             CORRELATION_ID_1,
+            mock.ANY,
         )
 
     @mock.patch("status_checker_lambda.status_checker.delete_metrics")
@@ -2583,6 +2584,7 @@ class TestReplayer(unittest.TestCase):
             PUSHGATEWAY_PORT,
             METRICS_JOB_NAME,
             CORRELATION_ID_1,
+            1,
         )
 
         expected_url = f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}"
