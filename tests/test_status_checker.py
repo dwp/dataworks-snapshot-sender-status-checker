@@ -40,6 +40,7 @@ SLACK_USERNAME = "Snapshot Sender"
 PUSHGATEWAY_HOSTNAME = "test-host"
 PUSHGATEWAY_PORT = 9090
 METRICS_JOB_NAME = "snapshot_sender_status_checker"
+GROUPING_KEY = {"test": "test_key"}
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_TABLE_NAME
@@ -2547,13 +2548,17 @@ class TestReplayer(unittest.TestCase):
         )
 
     @mock.patch("status_checker_lambda.status_checker.prometheus_client")
+    @mock.patch("status_checker_lambda.status_checker.generate_metrics_grouping_key")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_push_metrics_sends_the_metrics(
         self,
         mock_logger,
+        generate_metrics_grouping_key_mock,
         prometheus_client_mock,
     ):
         registry = mock.MagicMock()
+
+        generate_metrics_grouping_key_mock.return_value = GROUPING_KEY
 
         status_checker.push_metrics(
             registry,
@@ -2565,20 +2570,28 @@ class TestReplayer(unittest.TestCase):
 
         expected_url = f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}"
 
+        generate_metrics_grouping_key_mock.assert_called_once_with(
+            CORRELATION_ID_1,
+        )
+
         prometheus_client_mock.pushadd_to_gateway.assert_called_once_with(
             gateway=expected_url,
             job=METRICS_JOB_NAME,
-            grouping_key=CORRELATION_ID_1,
+            grouping_key=GROUPING_KEY,
             registry=registry,
         )
 
     @mock.patch("status_checker_lambda.status_checker.prometheus_client")
+    @mock.patch("status_checker_lambda.status_checker.generate_metrics_grouping_key")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_delete_metrics_sends_the_metrics(
         self,
         mock_logger,
+        generate_metrics_grouping_key_mock,
         prometheus_client_mock,
     ):
+        generate_metrics_grouping_key_mock.return_value = GROUPING_KEY
+
         status_checker.delete_metrics(
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
@@ -2589,11 +2602,31 @@ class TestReplayer(unittest.TestCase):
 
         expected_url = f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}"
 
+        generate_metrics_grouping_key_mock.assert_called_once_with(
+            CORRELATION_ID_1,
+        )
+
         prometheus_client_mock.delete_from_gateway.assert_called_once_with(
             gateway=expected_url,
             job=METRICS_JOB_NAME,
-            grouping_key=CORRELATION_ID_1,
+            grouping_key=GROUPING_KEY,
         )
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_generate_metrics_grouping_key(
+        self,
+        mock_logger,
+    ):
+        expected = {
+            "component": "snapshot_sender_status_checker",
+            "correlation_id": CORRELATION_ID_1,
+        }
+
+        actual = status_checker.generate_metrics_grouping_key(
+            CORRELATION_ID_1,
+        )
+
+        self.assertEqual(expected, actual)
 
 
 if __name__ == "__main__":
