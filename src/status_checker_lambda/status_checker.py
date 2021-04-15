@@ -205,10 +205,14 @@ def push_metrics(
         + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
     )
 
+    grouping_key = generate_metrics_grouping_key(
+        correlation_id,
+    )
+
     prometheus_client.pushadd_to_gateway(
         gateway=f"{host_name}:{port}",
         job=job_name,
-        grouping_key=correlation_id,
+        grouping_key=grouping_key,
         registry=registry,
     )
 
@@ -256,8 +260,14 @@ def delete_metrics(
         + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
     )
 
+    grouping_key = generate_metrics_grouping_key(
+        correlation_id,
+    )
+
     prometheus_client.delete_from_gateway(
-        gateway=f"{host_name}:{port}", job=job_name, grouping_key=correlation_id
+        gateway=f"{host_name}:{port}",
+        job=job_name,
+        grouping_key=grouping_key
     )
 
     logger.info(
@@ -300,6 +310,29 @@ def generate_monitoring_message_payload(
     )
 
     return payload
+
+
+def generate_metrics_grouping_key(
+    correlation_id,
+):
+    """Generates a payload for a monitoring message.
+
+    Arguments:
+        correlation_id (string): the correlation id for this snapshot sender run
+
+    """
+    grouping_key = {
+        "component": "snapshot_sender_status_checker",
+        "correlation_id": correlation_id,
+    }
+
+    dumped_key = get_escaped_json_string(grouping_key)
+
+    logger.info(
+        f'Generated grouping key", "dumped_key": {dumped_key}, "correlation_id": "{correlation_id}'
+    )
+
+    return grouping_key
 
 
 def generate_export_state_message_payload(
