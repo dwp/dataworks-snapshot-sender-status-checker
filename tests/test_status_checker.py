@@ -861,7 +861,6 @@ class TestReplayer(unittest.TestCase):
             value=1,
         )
 
-
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1022,7 +1021,6 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
-
 
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
@@ -1187,7 +1185,6 @@ class TestReplayer(unittest.TestCase):
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
 
-
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1287,7 +1284,6 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
-
 
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")

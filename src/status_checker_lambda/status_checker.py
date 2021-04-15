@@ -48,7 +48,7 @@ METRIC_LABEL_NAMES_PER_COLLECTION = [
     "correlation_id",
     "export_date",
     "snapshot_type",
-    "collection_name"
+    "collection_name",
 ]
 METRIC_LABEL_NAMES_PER_CORRELATION_ID = [
     "correlation_id",
