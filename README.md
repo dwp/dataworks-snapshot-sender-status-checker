@@ -109,3 +109,16 @@ When processing a message finishes, the metrics are pushed to the push gateway, 
 This lambda is part of a full run of sending files tied together with a correlation id which is passed to the lambda. Therefore all metrics have the correlation id as a label. When they are pushed they are also grouped using this as a key. When the lambda decides the full run has completed (for this lambda this means all `collections` have been set to `Success` status), then the lambda waits for the scrape interval from the push gateway to allow the final metrics to be sent to prometheus and then deletes the grouped metrics from the push gateway.
 
 So for a full run, there may be hundreds of lambda invocations with the same correlation id and these all push_add (i.e. append) the metrics on the push gateway. Then only the last lambda invocation actually deletes the metrics from the push gateway.
+
+### Specific metrics
+
+These are the metrics produced by this lambda:
+
+|Metric name|Description|Labels|
+|:---|:---|:---|
+|snapshot_sender_status_checker_message_processing_time | The time for snapshot sender process checker to process a message | correlation_id, export_date, snapshot_type |
+|snapshot_sender_status_checker_collections_received | The number of received collections | correlation_id, export_date, snapshot_type |
+|snapshot_sender_status_checker_collections_successful | The number of successful collections | correlation_id, export_date, snapshot_type |
+|snapshot_sender_status_checker_all_collections_received | The number of runs where all collections were received | correlation_id, export_date, snapshot_type |
+|snapshot_sender_status_checker_all_collections_succesful | The number of runs where all collections were successful | correlation_id, export_date, snapshot_type |
+|snapshot_sender_status_checker_files_received | The number of files received by NiFi | correlation_id, export_date, snapshot_type, collection_name |
