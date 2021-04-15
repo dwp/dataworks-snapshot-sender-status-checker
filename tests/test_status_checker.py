@@ -39,8 +39,7 @@ TEST_FILE_NAME = "test_file"
 SLACK_USERNAME = "Snapshot Sender"
 PUSHGATEWAY_HOSTNAME = "test-host"
 PUSHGATEWAY_PORT = 9090
-REQUEST_ID_FIELD_NAME = "awsRequestId"
-REQUEST_ID = "awsRequestTestId"
+METRICS_JOB_NAME = "snapshot_sender_status_checker"
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_TABLE_NAME
@@ -52,7 +51,6 @@ args.log_level = "INFO"
 
 
 class TestReplayer(unittest.TestCase):
-    @mock.patch("status_checker_lambda.status_checker.push_metrics")
     @mock.patch("status_checker_lambda.status_checker.handle_message")
     @mock.patch("status_checker_lambda.status_checker.extract_messages")
     @mock.patch("status_checker_lambda.status_checker.setup_logging")
@@ -67,89 +65,6 @@ class TestReplayer(unittest.TestCase):
         setup_logging_mock,
         extract_messages_mock,
         handle_message_mock,
-        push_metrics_mock,
-    ):
-        dynamodb_client_mock = mock.MagicMock()
-        sqs_client_mock = mock.MagicMock()
-        sns_client_mock = mock.MagicMock()
-        get_client_mock_return_values = {
-            "dynamodb": dynamodb_client_mock,
-            "sqs": sqs_client_mock,
-            "sns": sns_client_mock,
-        }
-        get_client_mock.side_effect = get_client_mock_return_values.get
-
-        get_parameters_mock.return_value = args
-
-        extract_messages_mock.return_value = [
-            {"test1": "test_value1"},
-            {"test2": "test_value2"},
-        ]
-
-        event = {
-            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
-            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
-            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-            REQUEST_ID_FIELD_NAME: REQUEST_ID,
-        }
-
-        status_checker.handler(event, None)
-
-        get_client_mock.assert_any_call("dynamodb")
-        get_client_mock.assert_any_call("sqs")
-        get_client_mock.assert_any_call("sns")
-
-        get_parameters_mock.assert_called_once()
-        setup_logging_mock.assert_called_once()
-
-        extract_messages_mock.assert_called_once_with(event)
-
-        self.assertEqual(handle_message_mock.call_count, 2)
-        handle_message_mock.assert_any_call(
-            {"test1": "test_value1"},
-            dynamodb_client_mock,
-            sqs_client_mock,
-            sns_client_mock,
-            DDB_TABLE_NAME,
-            SNS_TOPIC_ARN,
-            SQS_QUEUE_URL,
-        )
-        handle_message_mock.assert_any_call(
-            {"test2": "test_value2"},
-            dynamodb_client_mock,
-            sqs_client_mock,
-            sns_client_mock,
-            DDB_TABLE_NAME,
-            SNS_TOPIC_ARN,
-            SQS_QUEUE_URL,
-        )
-
-        push_metrics_mock.assert_called_once_with(
-            mock.ANY,
-            PUSHGATEWAY_HOSTNAME,
-            PUSHGATEWAY_PORT,
-            REQUEST_ID,
-        )
-
-
-class TestReplayer(unittest.TestCase):
-    @mock.patch("status_checker_lambda.status_checker.push_metrics")
-    @mock.patch("status_checker_lambda.status_checker.handle_message")
-    @mock.patch("status_checker_lambda.status_checker.extract_messages")
-    @mock.patch("status_checker_lambda.status_checker.setup_logging")
-    @mock.patch("status_checker_lambda.status_checker.get_parameters")
-    @mock.patch("status_checker_lambda.status_checker.get_client")
-    @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handler_gets_clients_and_processes_all_messages_with_no_request_id(
-        self,
-        mock_logger,
-        get_client_mock,
-        get_parameters_mock,
-        setup_logging_mock,
-        extract_messages_mock,
-        handle_message_mock,
-        push_metrics_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -195,6 +110,8 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
         )
         handle_message_mock.assert_any_call(
             {"test2": "test_value2"},
@@ -204,61 +121,12 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
-        )
-
-        push_metrics_mock.assert_called_once_with(
-            mock.ANY,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
-            mock.ANY,
         )
 
-
-class TestReplayer(unittest.TestCase):
+    @mock.patch("status_checker_lambda.status_checker.delete_metrics")
     @mock.patch("status_checker_lambda.status_checker.push_metrics")
-    @mock.patch("status_checker_lambda.status_checker.handle_message")
-    @mock.patch("status_checker_lambda.status_checker.extract_messages")
-    @mock.patch("status_checker_lambda.status_checker.setup_logging")
-    @mock.patch("status_checker_lambda.status_checker.get_parameters")
-    @mock.patch("status_checker_lambda.status_checker.get_client")
-    @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handler_pushes_metrics_even_when_error(
-        self,
-        mock_logger,
-        get_client_mock,
-        get_parameters_mock,
-        setup_logging_mock,
-        extract_messages_mock,
-        handle_message_mock,
-        push_metrics_mock,
-    ):
-        get_client_mock.side_effect = Exception("Test")
-        get_parameters_mock.return_value = args
-
-        event = {
-            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
-            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
-            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
-            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
-        }
-
-        with self.assertRaises(Exception):
-            status_checker.handler(event, None)
-
-        get_parameters_mock.assert_called_once()
-        setup_logging_mock.assert_called_once()
-        get_client_mock.assert_called_once()
-
-        push_metrics_mock.assert_called_once_with(
-            mock.ANY,
-            PUSHGATEWAY_HOSTNAME,
-            PUSHGATEWAY_PORT,
-            mock.ANY,
-        )
-
-        extract_messages_mock.assert_not_called()
-        handle_message_mock.assert_not_called()
-
     @mock.patch("status_checker_lambda.status_checker.process_message")
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -267,11 +135,14 @@ class TestReplayer(unittest.TestCase):
         mock_logger,
         check_for_mandatory_keys_mock,
         process_message_mock,
+        push_metrics_mock,
+        delete_metrics_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
 
+        process_message_mock.return_value = False
         check_for_mandatory_keys_mock.return_value = True
 
         message = {
@@ -290,6 +161,8 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
         )
 
         process_message_mock.assert_called_once_with(
@@ -307,16 +180,173 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
         )
 
+        push_metrics_mock.assert_called_once_with(
+            mock.ANY,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            METRICS_JOB_NAME,
+            CORRELATION_ID_1,
+        )
+
+        delete_metrics_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.delete_metrics")
+    @mock.patch("status_checker_lambda.status_checker.push_metrics")
     @mock.patch("status_checker_lambda.status_checker.process_message")
     @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_handle_message_stops_when_missing_mandatory_keys(
-        self, mock_logger, check_for_mandatory_keys_mock, process_message_mock
+    def test_handle_message_deletes_metrics_when_all_collections_successful(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_message_mock,
+        push_metrics_mock,
+        delete_metrics_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
 
+        process_message_mock.return_value = True
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
+        }
+
+        status_checker.handle_message(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+        )
+
+        process_message_mock.assert_called_once_with(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            TEST_FILE_NAME,
+        )
+
+        push_metrics_mock.assert_called_once_with(
+            mock.ANY,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            METRICS_JOB_NAME,
+            CORRELATION_ID_1,
+        )
+
+        delete_metrics_mock.assert_called_once_with(
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            METRICS_JOB_NAME,
+            CORRELATION_ID_1,
+            mock.ANY,
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.delete_metrics")
+    @mock.patch("status_checker_lambda.status_checker.push_metrics")
+    @mock.patch("status_checker_lambda.status_checker.process_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_handle_message_pushes_metrics_even_when_error(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_message_mock,
+        push_metrics_mock,
+        delete_metrics_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        process_message_mock.side_effect = Exception("Test")
+
+        process_message_mock.return_value = False
+        check_for_mandatory_keys_mock.return_value = True
+
+        message = {
+            COLLECTION_NAME_FIELD_NAME: COLLECTION_1,
+            CORRELATION_ID_FIELD_NAME: CORRELATION_ID_1,
+            SNAPSHOT_TYPE_FIELD_NAME: SNAPSHOT_TYPE,
+            EXPORT_DATE_FIELD_NAME: EXPORT_DATE,
+            FILE_NAME_FIELD_NAME: TEST_FILE_NAME,
+        }
+
+        with self.assertRaises(Exception):
+            status_checker.handle_message(
+                message,
+                dynamodb_client_mock,
+                sqs_client_mock,
+                sns_client_mock,
+                DDB_TABLE_NAME,
+                SNS_TOPIC_ARN,
+                SQS_QUEUE_URL,
+                PUSHGATEWAY_HOSTNAME,
+                PUSHGATEWAY_PORT,
+            )
+
+        process_message_mock.assert_called_once_with(
+            message,
+            dynamodb_client_mock,
+            sqs_client_mock,
+            sns_client_mock,
+            DDB_TABLE_NAME,
+            SNS_TOPIC_ARN,
+            SQS_QUEUE_URL,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            SNAPSHOT_TYPE,
+            EXPORT_DATE,
+            TEST_FILE_NAME,
+        )
+
+        push_metrics_mock.assert_called_once_with(
+            mock.ANY,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            METRICS_JOB_NAME,
+            CORRELATION_ID_1,
+        )
+
+        delete_metrics_mock.assert_not_called()
+
+    @mock.patch("status_checker_lambda.status_checker.delete_metrics")
+    @mock.patch("status_checker_lambda.status_checker.push_metrics")
+    @mock.patch("status_checker_lambda.status_checker.process_message")
+    @mock.patch("status_checker_lambda.status_checker.check_for_mandatory_keys")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_handle_message_stops_when_missing_mandatory_keys(
+        self,
+        mock_logger,
+        check_for_mandatory_keys_mock,
+        process_message_mock,
+        push_metrics_mock,
+        delete_metrics_mock,
+    ):
+        dynamodb_client_mock = mock.MagicMock()
+        sqs_client_mock = mock.MagicMock()
+        sns_client_mock = mock.MagicMock()
+
+        process_message_mock.return_value = False
         check_for_mandatory_keys_mock.return_value = False
 
         message = {
@@ -334,9 +364,13 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
         )
 
         process_message_mock.assert_not_called()
+        push_metrics_mock.assert_not_called()
+        delete_metrics_mock.assert_not_called()
 
     @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
     @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
@@ -353,7 +387,7 @@ class TestReplayer(unittest.TestCase):
 
         message = {}
 
-        status_checker.process_message(
+        result = status_checker.process_message(
             message,
             dynamodb_client_mock,
             sqs_client_mock,
@@ -385,6 +419,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_success_file_message_mock.assert_not_called()
+
+        self.assertFalse(result)
 
     @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
     @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
@@ -403,7 +439,7 @@ class TestReplayer(unittest.TestCase):
             IS_SUCCESS_FILE_FIELD_NAME: None,
         }
 
-        status_checker.process_message(
+        result = status_checker.process_message(
             message,
             dynamodb_client_mock,
             sqs_client_mock,
@@ -435,6 +471,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_success_file_message_mock.assert_not_called()
+
+        self.assertFalse(result)
 
     @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
     @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
@@ -453,7 +491,7 @@ class TestReplayer(unittest.TestCase):
             IS_SUCCESS_FILE_FIELD_NAME: "",
         }
 
-        status_checker.process_message(
+        result = status_checker.process_message(
             message,
             dynamodb_client_mock,
             sqs_client_mock,
@@ -485,6 +523,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_success_file_message_mock.assert_not_called()
+
+        self.assertFalse(result)
 
     @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
     @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
@@ -503,7 +543,7 @@ class TestReplayer(unittest.TestCase):
             IS_SUCCESS_FILE_FIELD_NAME: "false",
         }
 
-        status_checker.process_message(
+        result = status_checker.process_message(
             message,
             dynamodb_client_mock,
             sqs_client_mock,
@@ -536,6 +576,8 @@ class TestReplayer(unittest.TestCase):
 
         process_success_file_message_mock.assert_not_called()
 
+        self.assertFalse(result)
+
     @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
     @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -549,11 +591,13 @@ class TestReplayer(unittest.TestCase):
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
 
+        process_success_file_message_mock.return_value = False
+
         message = {
             IS_SUCCESS_FILE_FIELD_NAME: "true",
         }
 
-        status_checker.process_message(
+        result = status_checker.process_message(
             message,
             dynamodb_client_mock,
             sqs_client_mock,
@@ -581,6 +625,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_normal_file_message_mock.assert_not_called()
+
+        self.assertFalse(result)
 
     @mock.patch("status_checker_lambda.status_checker.process_normal_file_message")
     @mock.patch("status_checker_lambda.status_checker.process_success_file_message")
@@ -595,11 +641,13 @@ class TestReplayer(unittest.TestCase):
         sqs_client_mock = mock.MagicMock()
         sns_client_mock = mock.MagicMock()
 
+        process_success_file_message_mock.return_value = True
+
         message = {
             IS_SUCCESS_FILE_FIELD_NAME: "TRUE",
         }
 
-        status_checker.process_message(
+        result = status_checker.process_message(
             message,
             dynamodb_client_mock,
             sqs_client_mock,
@@ -627,6 +675,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_normal_file_message_mock.assert_not_called()
+
+        self.assertTrue(result)
 
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1257,7 +1307,7 @@ class TestReplayer(unittest.TestCase):
         }
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
 
-        status_checker.process_success_file_message(
+        result = status_checker.process_success_file_message(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
@@ -1325,6 +1375,8 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
         )
 
+        self.assertTrue(result)
+
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1372,7 +1424,7 @@ class TestReplayer(unittest.TestCase):
 
         check_completion_status_mock.return_value = False
 
-        status_checker.process_success_file_message(
+        result = status_checker.process_success_file_message(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
@@ -1428,6 +1480,8 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
 
+        self.assertFalse(result)
+
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1461,7 +1515,7 @@ class TestReplayer(unittest.TestCase):
         get_current_collection_mock.return_value = single_collection_result
         is_collection_success_mock.return_value = False
 
-        status_checker.process_success_file_message(
+        result = status_checker.process_success_file_message(
             DDB_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
@@ -1495,6 +1549,8 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_not_called()
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
+
+        self.assertFalse(result)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_sns_payload_generates_valid_payload(self, mock_logger):
@@ -1834,18 +1890,14 @@ class TestReplayer(unittest.TestCase):
             )
         )
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_true_for_sent_status(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
 
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
@@ -1864,31 +1916,24 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_called_once_with(
+        increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
-            TEST_FILE_NAME,
         )
-
-        counter_with_labels.inc.assert_called_once()
 
         self.assertTrue(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_true_for_exported_status(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
 
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
@@ -1907,31 +1952,25 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_called_once_with(
+        increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
-            TEST_FILE_NAME,
         )
-
-        counter_with_labels.inc.assert_called_once()
 
         self.assertTrue(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_false_when_more_files_exported(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
+        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
@@ -1950,23 +1989,19 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_not_called()
-        counter_with_labels.inc.assert_not_called()
+        increment_counter_mock.assert_not_called()
+        counter.inc.assert_not_called()
 
         self.assertFalse(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_true_when_more_files_sent(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
 
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
@@ -1985,31 +2020,25 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_called_once_with(
+        increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
-            TEST_FILE_NAME,
         )
-
-        counter_with_labels.inc.assert_called_once()
 
         self.assertTrue(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_false_when_more_files_received(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
+        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
@@ -2028,23 +2057,20 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_not_called()
-        counter_with_labels.inc.assert_not_called()
+        increment_counter_mock.assert_not_called()
+        counter.inc.assert_not_called()
 
         self.assertFalse(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_false_when_more_files_exported_and_sent(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
+        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
@@ -2063,23 +2089,20 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_not_called()
-        counter_with_labels.inc.assert_not_called()
+        increment_counter_mock.assert_not_called()
+        counter.inc.assert_not_called()
 
         self.assertFalse(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_received_returns_false_when_collection_status_not_sent_or_exported(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
+        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": EXPORTING_STATUS},
@@ -2098,23 +2121,19 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_not_called()
-        counter_with_labels.inc.assert_not_called()
+        increment_counter_mock.assert_not_called()
+        counter.inc.assert_not_called()
 
         self.assertFalse(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_success_returns_true_for_received_collection(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
 
         event = {
             "CollectionStatus": {"S": RECEIVED_STATUS},
@@ -2130,31 +2149,24 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_called_once_with(
+        increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
-            TEST_FILE_NAME,
         )
-
-        counter_with_labels.inc.assert_called_once()
 
         self.assertTrue(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_success_returns_true_for_sent_collection(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
 
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
@@ -2170,31 +2182,25 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_called_once_with(
+        increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
-            TEST_FILE_NAME,
         )
-
-        counter_with_labels.inc.assert_called_once()
 
         self.assertTrue(actual)
 
-    @mock.patch("status_checker_lambda.status_checker.add_label_values_to_metric")
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_is_collection_success_returns_false(
         self,
         mock_logger,
-        add_label_values_to_metric_mock,
+        increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter_with_labels = mock.MagicMock()
-        counter_with_labels.inc = mock.MagicMock()
-
-        add_label_values_to_metric_mock.return_value = counter_with_labels
+        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": EXPORTED_STATUS},
@@ -2210,8 +2216,8 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        add_label_values_to_metric_mock.assert_not_called()
-        counter_with_labels.inc.assert_not_called()
+        increment_counter_mock.assert_not_called()
+        counter.inc.assert_not_called()
 
         self.assertFalse(actual)
 
@@ -2518,28 +2524,26 @@ class TestReplayer(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_add_label_values_to_metric_adds_correct_labels(
+    def test_increment_counter_mock_adds_correct_labels(
         self,
         mock_logger,
     ):
-        metric = mock.MagicMock()
-        metric.labels = mock.MagicMock()
+        counter = mock.MagicMock()
+        counter.labels = mock.MagicMock()
 
-        status_checker.add_label_values_to_metric(
-            metric,
+        status_checker.increment_counter(
+            counter,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
-            TEST_FILE_NAME,
         )
 
-        metric.labels.assert_called_once_with(
+        counter.labels.assert_called_once_with(
             correlation_id=CORRELATION_ID_1,
             collection_name=COLLECTION_1,
             export_date=EXPORT_DATE,
             snapshot_type=SNAPSHOT_TYPE,
-            file_name=TEST_FILE_NAME,
         )
 
     @mock.patch("status_checker_lambda.status_checker.prometheus_client")
@@ -2555,13 +2559,40 @@ class TestReplayer(unittest.TestCase):
             registry,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            METRICS_JOB_NAME,
             CORRELATION_ID_1,
         )
 
-        prometheus_client_mock.push_to_gateway.assert_called_once_with(
-            f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}",
-            job=CORRELATION_ID_1,
+        expected_url = f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}"
+
+        prometheus_client_mock.pushadd_to_gateway.assert_called_once_with(
+            gateway=expected_url,
+            job=METRICS_JOB_NAME,
+            grouping_key=CORRELATION_ID_1,
             registry=registry,
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.prometheus_client")
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_delete_metrics_sends_the_metrics(
+        self,
+        mock_logger,
+        prometheus_client_mock,
+    ):
+        status_checker.delete_metrics(
+            PUSHGATEWAY_HOSTNAME,
+            PUSHGATEWAY_PORT,
+            METRICS_JOB_NAME,
+            CORRELATION_ID_1,
+            1,
+        )
+
+        expected_url = f"{PUSHGATEWAY_HOSTNAME}:{PUSHGATEWAY_PORT}"
+
+        prometheus_client_mock.delete_from_gateway.assert_called_once_with(
+            gateway=expected_url,
+            job=METRICS_JOB_NAME,
+            grouping_key=CORRELATION_ID_1,
         )
 
 

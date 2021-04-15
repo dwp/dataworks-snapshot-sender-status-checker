@@ -5,8 +5,8 @@ import os
 import sys
 import socket
 import json
-import uuid
 import prometheus_client
+import time
 
 CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
@@ -41,13 +41,14 @@ required_message_keys = [
 args = None
 logger = None
 
+METRICS_SCRAPE_INTERVAL_SECONDS = 70
+METRICS_JOB_NAME = "snapshot_sender_status_checker"
 METRICS_REGISTRY = prometheus_client.CollectorRegistry()
 METRIC_LABEL_NAMES = [
     "correlation_id",
     "collection_name",
     "export_date",
     "snapshot_type",
-    "file_name",
 ]
 MESSAGE_PROCESSING_TIME = prometheus_client.Summary(
     "snapshot_sender_status_checker_message_processing_time",
@@ -177,7 +178,8 @@ def push_metrics(
     registry,
     host_name,
     port,
-    unique_request_id,
+    job_name,
+    correlation_id,
 ):
     """Pushes metrics to the push-gateway.
 
@@ -185,33 +187,82 @@ def push_metrics(
         registry (object) the metrics registry to use
         host_name (string) the host name for the push gateway
         port (string) the post number for the push gateway
-        snapshot_type (string): full or incremental
-        collection_name (string): the collection name that has been received
-        file_name: (string) file name for logging purposes
+        job_name (string): a name for the metrics job
         correlation_id: (string) the correlation id of this run
-        export_date (string): the date of the export
-        unique_request_id (string): a unique id for this request
 
     """
+    url = f"{host_name}:{port}"
+
     if not host_name:
         logger.info(
             f'Not pushing metrics to the push gateway due to no host name set", "host_name": "{host_name}", '
-            + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
+            + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
         )
         return
 
     logger.info(
         f'Pushing metrics to the push gateway", "host_name": "{host_name}", '
-        + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
+        + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
     )
 
-    prometheus_client.push_to_gateway(
-        f"{host_name}:{port}", job=f"{unique_request_id}", registry=registry
+    prometheus_client.pushadd_to_gateway(
+        gateway=f"{host_name}:{port}",
+        job=job_name,
+        grouping_key=correlation_id,
+        registry=registry,
     )
 
     logger.info(
         f'Pushed metrics to the push gateway", "host_name": "{host_name}", '
-        + f'"unique_request_id": "{unique_request_id}", "port": "{port}"'
+        + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
+    )
+
+
+def delete_metrics(
+    host_name,
+    port,
+    job_name,
+    correlation_id,
+    scrape_interval_seconds,
+):
+    """Deletes metrics from the push-gateway.
+
+    Arguments:
+        host_name (string) the host name for the push gateway
+        port (string) the post number for the push gateway
+        job_name (string): a name for the metrics job
+        correlation_id: (string) the correlation id of this run
+        scrape_interval_seconds: (int) the prometheus scrape interval in seconds
+
+    """
+    url = f"{host_name}:{port}"
+
+    if not host_name:
+        logger.info(
+            f'Not deleting metrics to the push gateway due to no host name set", "host_name": "{host_name}", '
+            + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
+        )
+        return
+
+    logger.info(
+        f'Sleeping to allow final metrics to be scraped", "host_name": "{host_name}", "scrape_interval_seconds": "{scrape_interval_seconds}", '
+        + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
+    )
+
+    time.sleep(scrape_interval_seconds)
+
+    logger.info(
+        f'Deleting metrics from the push gateway", "host_name": "{host_name}", '
+        + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
+    )
+
+    prometheus_client.delete_from_gateway(
+        gateway=f"{host_name}:{port}", job=job_name, grouping_key=correlation_id
+    )
+
+    logger.info(
+        f'Deleted metrics from the push gateway", "host_name": "{host_name}", '
+        + f'"job_name": "{job_name}", "correlation_id": "{correlation_id}", "port": "{port}", "url": "{url}'
     )
 
 
@@ -500,38 +551,40 @@ def update_files_received_for_collection(
     return response[ATTRIBUTES_FIELD_NAME]
 
 
-def add_label_values_to_metric(
-    metric,
+def increment_counter(
+    counter,
     correlation_id,
     collection_name,
     export_date,
     snapshot_type,
-    file_name,
+    value=1,
 ):
-    """Adds all the relevant labels to the metrics.
+    """Increments the given counter by the given amount.
 
     Arguments:
-        metric (object): The metric to add labels to (must have been initialised with the labels)
+        counter (object): The counter to increment (must have been initialised with the labels)
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
         export_date (string): The date of the export
         snapshot_type (string): Will be full or incremental
-        file_name (string): The file name
+        value (int): Increment value (default is 1)
     """
     logger.info(
-        f'Adding label values to metric", "metric": "{metric}", "snapshot_type": "{snapshot_type}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}",  "export_date": "{export_date}", "file_name": "{file_name}'
+        f'Incrementing counter", "counter": "{counter}", "snapshot_type": "{snapshot_type}", "correlation_id": '
+        + f'"{correlation_id}", "value": "{value}", "collection_name": "{collection_name}",  "export_date": "{export_date}'
     )
 
-    metric.labels(
+    counter.labels(
         correlation_id=correlation_id,
         collection_name=collection_name,
         export_date=export_date,
         snapshot_type=snapshot_type,
-        file_name=file_name,
-    )
+    ).inc(value)
 
-    return metric
+    logger.info(
+        f'Incremented counter", "counter": "{counter}", "snapshot_type": "{snapshot_type}", "correlation_id": '
+        + f'"{correlation_id}", "value": "{value}", "collection_name": "{collection_name}",  "export_date": "{export_date}'
+    )
 
 
 def update_status_for_collection(
@@ -697,15 +750,6 @@ def is_collection_received(
     )
 
     if is_received:
-        counter_with_labels = add_label_values_to_metric(
-            counter,
-            correlation_id,
-            collection_name,
-            export_date,
-            snapshot_type,
-            file_name,
-        )
-
         logger.info(
             f'Incrementing received collections counter", "is_received": "{is_received}", "collection_status": '
             + f'"{collection_status}", "collection_files_received_count": "{collection_files_received_count}", '
@@ -715,7 +759,13 @@ def is_collection_received(
             + f'"file_name": "{file_name}'
         )
 
-        counter_with_labels.inc()
+        increment_counter(
+            counter,
+            correlation_id,
+            collection_name,
+            export_date,
+            snapshot_type,
+        )
 
     return is_received
 
@@ -761,15 +811,6 @@ def is_collection_success(
     )
 
     if is_success:
-        counter_with_labels = add_label_values_to_metric(
-            counter,
-            correlation_id,
-            collection_name,
-            export_date,
-            snapshot_type,
-            file_name,
-        )
-
         logger.info(
             f'Incrementing successful collections counter", "is_success": "{is_success}", "collection_status": '
             + f'"collection_status": "{collection_status}", '
@@ -778,7 +819,13 @@ def is_collection_success(
             + f'"file_name": "{file_name}'
         )
 
-        counter_with_labels.inc()
+        increment_counter(
+            counter,
+            correlation_id,
+            collection_name,
+            export_date,
+            snapshot_type,
+        )
 
     return is_success
 
@@ -838,7 +885,7 @@ def process_success_file_message(
     sns_topic_arn,
     file_name,
 ):
-    """Processes an individual success files message.
+    """Processes an individual success files message and returns true if all collections successful.
 
     Arguments:
         ddb_table (string): The ddb table name
@@ -906,12 +953,15 @@ def process_success_file_message(
                 correlation_id,
                 file_name,
             )
+
             send_sns_message(
                 sns_client,
                 sns_payload,
                 sns_topic_arn,
                 file_name,
             )
+
+            return True
         else:
             logger.info(
                 f'All collections have not been successful so no further processing", "file_name": "{file_name}", '
@@ -924,6 +974,8 @@ def process_success_file_message(
             + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
             + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
         )
+
+    return False
 
 
 def process_normal_file_message(
@@ -1079,6 +1131,8 @@ def process_message(
         export_date (string): The export date
         file_name (string): For logging purposes
     """
+    result = False
+
     dumped_message = get_escaped_json_string(message)
     logger.info(
         f'Processing new message", "message": "{dumped_message}", "file_name": "{file_name}", '
@@ -1105,7 +1159,7 @@ def process_message(
     )
 
     if is_success_file:
-        process_success_file_message(
+        result = process_success_file_message(
             ddb_table,
             dynamodb_client,
             sns_client,
@@ -1133,6 +1187,8 @@ def process_message(
             file_name,
         )
 
+    return result
+
 
 def handle_message(
     message,
@@ -1142,6 +1198,8 @@ def handle_message(
     ddb_table,
     sns_topic_arn,
     sqs_queue_url,
+    pushgateway_host,
+    pushgateway_port,
 ):
     """Handles an individual message.
 
@@ -1153,6 +1211,8 @@ def handle_message(
         ddb_table (string): The ddb table name
         sns_topic_arn (string): The arn of the SNS topic to send to
         sqs_queue_url (string): The url of the SQS queue to send to
+        pushgateway_host (string): The host name of the push gateway
+        pushgateway_port (string): The port of the push gateway
     """
     dumped_message = get_escaped_json_string(message)
     logger.info(f'Handling new message", "message": "{dumped_message}"')
@@ -1171,20 +1231,40 @@ def handle_message(
         else "NOT_SET"
     )
 
-    process_message(
-        message,
-        dynamodb_client,
-        sqs_client,
-        sns_client,
-        ddb_table,
-        sns_topic_arn,
-        sqs_queue_url,
-        correlation_id,
-        collection_name,
-        snapshot_type,
-        export_date,
-        file_name,
-    )
+    all_collections_successful = False
+
+    try:
+        all_collections_successful = process_message(
+            message,
+            dynamodb_client,
+            sqs_client,
+            sns_client,
+            ddb_table,
+            sns_topic_arn,
+            sqs_queue_url,
+            correlation_id,
+            collection_name,
+            snapshot_type,
+            export_date,
+            file_name,
+        )
+    finally:
+        push_metrics(
+            METRICS_REGISTRY,
+            pushgateway_host,
+            pushgateway_port,
+            METRICS_JOB_NAME,
+            correlation_id,
+        )
+
+        if all_collections_successful:
+            delete_metrics(
+                pushgateway_host,
+                pushgateway_port,
+                METRICS_JOB_NAME,
+                correlation_id,
+                METRICS_SCRAPE_INTERVAL_SECONDS,
+            )
 
 
 def handler(event, context):
@@ -1197,44 +1277,23 @@ def handler(event, context):
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Processing new event", "event": "{dumped_event}"')
 
-    try:
-        dynamodb_client = get_client("dynamodb")
-        sqs_client = get_client("sqs")
-        sns_client = get_client("sns")
+    dynamodb_client = get_client("dynamodb")
+    sqs_client = get_client("sqs")
+    sns_client = get_client("sns")
 
-        messages = extract_messages(event)
+    messages = extract_messages(event)
 
-        for message in messages:
-            handle_message(
-                message,
-                dynamodb_client,
-                sqs_client,
-                sns_client,
-                args.dynamo_db_export_status_table_name,
-                args.monitoring_sns_topic_arn,
-                args.export_state_sqs_queue_url,
-            )
-    finally:
-        unique_id = None
-
-        if "awsRequestId" in event and event["awsRequestId"]:
-            unique_id = event["awsRequestId"]
-            logger.warn(
-                'Using awsRequestId from event for metrics group", '
-                + f'"host_name": "{args.pushgateway_hostname}", "unique_request_id": "{unique_id}", "port": "{args.pushgateway_port}"'
-            )
-        else:
-            unique_id = uuid.uuid4()
-            logger.info(
-                'No awsRequestId or awsRequestId blank in event so could not use it for metrics group", '
-                + f'"host_name": "{args.pushgateway_hostname}", "generated_request_id": "{unique_id}", "port": "{args.pushgateway_port}"'
-            )
-
-        push_metrics(
-            METRICS_REGISTRY,
+    for message in messages:
+        handle_message(
+            message,
+            dynamodb_client,
+            sqs_client,
+            sns_client,
+            args.dynamo_db_export_status_table_name,
+            args.monitoring_sns_topic_arn,
+            args.export_state_sqs_queue_url,
             args.pushgateway_hostname,
             args.pushgateway_port,
-            unique_id,
         )
 
 
