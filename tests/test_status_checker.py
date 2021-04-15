@@ -2625,7 +2625,7 @@ class TestReplayer(unittest.TestCase):
         actual = status_checker.generate_metrics_grouping_key(
             CORRELATION_ID_1,
         )
-        
+
         self.assertEqual(expected, actual)
 
 

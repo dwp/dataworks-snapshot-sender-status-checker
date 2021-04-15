@@ -265,9 +265,7 @@ def delete_metrics(
     )
 
     prometheus_client.delete_from_gateway(
-        gateway=f"{host_name}:{port}",
-        job=job_name,
-        grouping_key=grouping_key
+        gateway=f"{host_name}:{port}", job=job_name, grouping_key=grouping_key
     )
 
     logger.info(
