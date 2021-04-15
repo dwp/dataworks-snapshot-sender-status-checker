@@ -679,6 +679,7 @@ class TestReplayer(unittest.TestCase):
 
         self.assertTrue(result)
 
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -709,6 +710,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -779,7 +781,10 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
+            mock.ANY,
         )
 
         is_collection_received_mock.assert_called_once_with(
@@ -847,6 +852,17 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
         )
 
+        increment_counter_mock.assert_called_once_with(
+            mock.ANY,
+            CORRELATION_ID_1,
+            None,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+            value=1,
+        )
+
+
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -877,6 +893,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -946,7 +963,10 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
+            mock.ANY,
         )
 
         is_collection_received_mock.assert_called_once_with(
@@ -1001,7 +1021,10 @@ class TestReplayer(unittest.TestCase):
 
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
+        increment_counter_mock.assert_not_called()
 
+
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1032,6 +1055,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1103,7 +1127,10 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
+            mock.ANY,
         )
 
         is_collection_received_mock.assert_called_once_with(
@@ -1158,7 +1185,10 @@ class TestReplayer(unittest.TestCase):
 
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
+        increment_counter_mock.assert_not_called()
 
+
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1189,6 +1219,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1233,7 +1264,10 @@ class TestReplayer(unittest.TestCase):
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
+            mock.ANY,
         )
 
         is_collection_received_mock.assert_called_once_with(
@@ -1252,7 +1286,10 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_not_called()
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
+        increment_counter_mock.assert_not_called()
 
+
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1275,6 +1312,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1376,8 +1414,18 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
         )
 
+        increment_counter_mock.assert_called_once_with(
+            mock.ANY,
+            CORRELATION_ID_1,
+            None,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+            value=1,
+        )
+
         self.assertTrue(result)
 
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1400,6 +1448,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1480,9 +1529,11 @@ class TestReplayer(unittest.TestCase):
 
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
+        increment_counter_mock.assert_not_called()
 
         self.assertFalse(result)
 
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
         "status_checker_lambda.status_checker.generate_monitoring_message_payload"
@@ -1505,6 +1556,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock,
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
+        increment_counter_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1550,6 +1602,7 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.assert_not_called()
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
+        increment_counter_mock.assert_not_called()
 
         self.assertFalse(result)
 
@@ -1920,7 +1973,7 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
-            COLLECTION_1,
+            None,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
         )
@@ -1956,7 +2009,7 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
-            COLLECTION_1,
+            None,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
         )
@@ -2024,7 +2077,7 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
-            COLLECTION_1,
+            None,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
         )
@@ -2153,7 +2206,7 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
-            COLLECTION_1,
+            None,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
         )
@@ -2186,7 +2239,7 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock.assert_called_once_with(
             counter,
             CORRELATION_ID_1,
-            COLLECTION_1,
+            None,
             EXPORT_DATE,
             SNAPSHOT_TYPE,
         )
@@ -2274,20 +2327,27 @@ class TestReplayer(unittest.TestCase):
             ReturnValues="ALL_NEW",
         )
 
+    @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
     def test_update_files_received_for_collection_sends_right_message(
         self,
         mock_logger,
+        increment_counter_mock,
     ):
         dynamodb_mock = mock.MagicMock()
         dynamodb_mock.update_item = mock.MagicMock()
+
+        counter = mock.MagicMock()
 
         status_checker.update_files_received_for_collection(
             dynamodb_mock,
             DDB_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
             TEST_FILE_NAME,
+            counter,
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
@@ -2299,6 +2359,15 @@ class TestReplayer(unittest.TestCase):
             UpdateExpression="SET FilesReceived = FilesReceived + :val",
             ExpressionAttributeValues={":val": {"N": "1"}},
             ReturnValues="ALL_NEW",
+        )
+
+        increment_counter_mock.assert_called_once_with(
+            counter,
+            CORRELATION_ID_1,
+            COLLECTION_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+            value=1,
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
@@ -2543,6 +2612,28 @@ class TestReplayer(unittest.TestCase):
         counter.labels.assert_called_once_with(
             correlation_id=CORRELATION_ID_1,
             collection_name=COLLECTION_1,
+            export_date=EXPORT_DATE,
+            snapshot_type=SNAPSHOT_TYPE,
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_increment_counter_mock_adds_correct_labels_with_no_collection_name(
+        self,
+        mock_logger,
+    ):
+        counter = mock.MagicMock()
+        counter.labels = mock.MagicMock()
+
+        status_checker.increment_counter(
+            counter,
+            CORRELATION_ID_1,
+            None,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+        )
+
+        counter.labels.assert_called_once_with(
+            correlation_id=CORRELATION_ID_1,
             export_date=EXPORT_DATE,
             snapshot_type=SNAPSHOT_TYPE,
         )

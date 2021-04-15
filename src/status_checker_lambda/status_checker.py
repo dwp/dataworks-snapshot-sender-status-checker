@@ -44,9 +44,14 @@ logger = None
 METRICS_SCRAPE_INTERVAL_SECONDS = 70
 METRICS_JOB_NAME = "snapshot_sender_status_checker"
 METRICS_REGISTRY = prometheus_client.CollectorRegistry()
-METRIC_LABEL_NAMES = [
+METRIC_LABEL_NAMES_PER_COLLECTION = [
     "correlation_id",
-    "collection_name",
+    "export_date",
+    "snapshot_type",
+    "collection_name"
+]
+METRIC_LABEL_NAMES_PER_CORRELATION_ID = [
+    "correlation_id",
     "export_date",
     "snapshot_type",
 ]
@@ -58,13 +63,31 @@ MESSAGE_PROCESSING_TIME = prometheus_client.Summary(
 COUNTER_RECEIVED_COLLECTIONS = prometheus_client.Counter(
     name="snapshot_sender_status_checker_collections_received",
     documentation="The number of received collections",
-    labelnames=METRIC_LABEL_NAMES,
+    labelnames=METRIC_LABEL_NAMES_PER_CORRELATION_ID,
     registry=METRICS_REGISTRY,
 )
 COUNTER_SUCCESSFUL_COLLECTIONS = prometheus_client.Counter(
     name="snapshot_sender_status_checker_collections_successful",
     documentation="The number of successful collections",
-    labelnames=METRIC_LABEL_NAMES,
+    labelnames=METRIC_LABEL_NAMES_PER_CORRELATION_ID,
+    registry=METRICS_REGISTRY,
+)
+COUNTER_ALL_COLLECTIONS_RECEIVED = prometheus_client.Counter(
+    name="snapshot_sender_status_checker_all_collections_received",
+    documentation="The number of runs where all collections were received",
+    labelnames=METRIC_LABEL_NAMES_PER_CORRELATION_ID,
+    registry=METRICS_REGISTRY,
+)
+COUNTER_ALL_COLLECTIONS_SUCCESSFUL = prometheus_client.Counter(
+    name="snapshot_sender_status_checker_all_collections_succesful",
+    documentation="The number of runs where all collections were successful",
+    labelnames=METRIC_LABEL_NAMES_PER_CORRELATION_ID,
+    registry=METRICS_REGISTRY,
+)
+COUNTER_RECEIVED_FILES = prometheus_client.Counter(
+    name="snapshot_sender_status_checker_files_received",
+    documentation="The number of files received by NiFi",
+    labelnames=METRIC_LABEL_NAMES_PER_COLLECTION,
     registry=METRICS_REGISTRY,
 )
 
@@ -550,7 +573,10 @@ def update_files_received_for_collection(
     ddb_status_table,
     correlation_id,
     collection_name,
+    export_date,
+    snapshot_type,
     file_name,
+    counter,
 ):
     """Increment files received by one in dynamodb for the given collection name and correlation id.
 
@@ -559,11 +585,15 @@ def update_files_received_for_collection(
         ddb_status_table (string): The name of the Dynamodb status table
         correlation_id (string): String value of CorrelationId column
         collection_name (string): String value of CollectionName column
-        file_name: file name for logging purposes
+        export_date (string): The date of the export
+        snapshot_type (string): Will be full or incremental
+        file_name (string): file name for logging purposes
+        counter (object): the counter to increment for files received
     """
     logger.info(
         f'Incrementing files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}", "file_name": "{file_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "file_name": "{file_name}", '
+        + f'"snapshot_type": "{snapshot_type}",  "export_date": "{export_date}"'
     )
 
     response = dynamodb_client.update_item(
@@ -577,9 +607,19 @@ def update_files_received_for_collection(
         ReturnValues="ALL_NEW",
     )
 
+    increment_counter(
+        counter,
+        correlation_id,
+        collection_name,
+        export_date,
+        snapshot_type,
+        value=1,
+    )
+
     logger.info(
         f'Incremented files received count", "ddb_status_table": "{ddb_status_table}", "correlation_id": '
-        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}", "file_name": "{file_name}'
+        + f'"{correlation_id}", "collection_name": "{collection_name}", "response": "{response}", "file_name": "{file_name}", '
+        + f'"snapshot_type": "{snapshot_type}",  "export_date": "{export_date}"'
     )
 
     return response[ATTRIBUTES_FIELD_NAME]
@@ -598,7 +638,7 @@ def increment_counter(
     Arguments:
         counter (object): The counter to increment (must have been initialised with the labels)
         correlation_id (string): String value of CorrelationId column
-        collection_name (string): String value of CollectionName column
+        collection_name (string): String value of CollectionName column (or None if this label is not present)
         export_date (string): The date of the export
         snapshot_type (string): Will be full or incremental
         value (int): Increment value (default is 1)
@@ -608,12 +648,19 @@ def increment_counter(
         + f'"{correlation_id}", "value": "{value}", "collection_name": "{collection_name}",  "export_date": "{export_date}'
     )
 
-    counter.labels(
-        correlation_id=correlation_id,
-        collection_name=collection_name,
-        export_date=export_date,
-        snapshot_type=snapshot_type,
-    ).inc(value)
+    if collection_name is None:
+        counter.labels(
+            correlation_id=correlation_id,
+            export_date=export_date,
+            snapshot_type=snapshot_type,
+        ).inc(value)
+    else:
+        counter.labels(
+            correlation_id=correlation_id,
+            collection_name=collection_name,
+            export_date=export_date,
+            snapshot_type=snapshot_type,
+        ).inc(value)
 
     logger.info(
         f'Incremented counter", "counter": "{counter}", "snapshot_type": "{snapshot_type}", "correlation_id": '
@@ -796,7 +843,7 @@ def is_collection_received(
         increment_counter(
             counter,
             correlation_id,
-            collection_name,
+            None,
             export_date,
             snapshot_type,
         )
@@ -856,7 +903,7 @@ def is_collection_success(
         increment_counter(
             counter,
             correlation_id,
-            collection_name,
+            None,
             export_date,
             snapshot_type,
         )
@@ -995,6 +1042,15 @@ def process_success_file_message(
                 file_name,
             )
 
+            increment_counter(
+                COUNTER_ALL_COLLECTIONS_SUCCESSFUL,
+                correlation_id,
+                None,
+                export_date,
+                snapshot_type,
+                value=1,
+            )
+
             return True
         else:
             logger.info(
@@ -1056,7 +1112,10 @@ def process_normal_file_message(
         ddb_table,
         correlation_id,
         collection_name,
+        export_date,
+        snapshot_type,
         file_name,
+        COUNTER_RECEIVED_FILES,
     )
 
     received_result = is_collection_received(
@@ -1087,6 +1146,7 @@ def process_normal_file_message(
             reprocess_files,
             file_name,
         )
+
         send_sqs_message(
             sqs_client,
             sqs_payload,
@@ -1100,6 +1160,7 @@ def process_normal_file_message(
             correlation_id,
             file_name,
         )
+
         if check_completion_status(
             all_statuses,
             [RECEIVED_STATUS_VALUE, SUCCESS_STATUS_VALUE],
@@ -1114,11 +1175,21 @@ def process_normal_file_message(
                 correlation_id,
                 file_name,
             )
+
             send_sns_message(
                 sns_client,
                 sns_payload,
                 sns_topic_arn,
                 file_name,
+            )
+
+            increment_counter(
+                COUNTER_ALL_COLLECTIONS_RECEIVED,
+                correlation_id,
+                None,
+                export_date,
+                snapshot_type,
+                value=1,
             )
         else:
             logger.info(
