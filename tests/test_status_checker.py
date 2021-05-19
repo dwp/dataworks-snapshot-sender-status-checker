@@ -29,7 +29,8 @@ REPROCESS_FILES_FIELD_NAME = "reprocess_files"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
 COLLECTION_STATUS_DDB_FIELD_NAME = "CollectionStatus"
-DDB_TABLE_NAME = "TestStatusTable"
+DDB_EXPORT_TABLE_NAME = "TestStatusTable"
+DDB_PRODUCT_TABLE_NAME = "TestProductTable"
 SQS_QUEUE_URL = "http://test"
 SNS_TOPIC_ARN = "test_sns_arn"
 EXPORT_DATE = "2021-01-01"
@@ -41,9 +42,12 @@ PUSHGATEWAY_HOSTNAME = "test-host"
 PUSHGATEWAY_PORT = 9090
 METRICS_JOB_NAME = "snapshot_sender_status_checker"
 GROUPING_KEY = {"test": "test_key"}
+RECEIVED_PRODUCT_STATUS_VALUE = "RECEIVED"
+COMPLETED_PRODUCT_STATUS_VALUE = "COMPLETED"
 
 args = argparse.Namespace()
-args.dynamo_db_export_status_table_name = DDB_TABLE_NAME
+args.dynamo_db_export_status_table_name = DDB_EXPORT_TABLE_NAME
+args.dynamo_db_product_status_table_name = DDB_PRODUCT_TABLE_NAME
 args.monitoring_sns_topic_arn = SNS_TOPIC_ARN
 args.export_state_sqs_queue_url = SQS_QUEUE_URL
 args.pushgateway_hostname = PUSHGATEWAY_HOSTNAME
@@ -108,7 +112,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
@@ -119,7 +124,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
@@ -159,7 +165,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
@@ -171,7 +178,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -224,7 +232,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
@@ -236,7 +245,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -298,7 +308,8 @@ class TestReplayer(unittest.TestCase):
                 dynamodb_client_mock,
                 sqs_client_mock,
                 sns_client_mock,
-                DDB_TABLE_NAME,
+                DDB_EXPORT_TABLE_NAME,
+                DDB_PRODUCT_TABLE_NAME,
                 SNS_TOPIC_ARN,
                 SQS_QUEUE_URL,
                 PUSHGATEWAY_HOSTNAME,
@@ -310,7 +321,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -362,7 +374,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
@@ -393,7 +406,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -404,7 +418,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_normal_file_message_mock.assert_called_once_with(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -445,7 +460,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -456,7 +472,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_normal_file_message_mock.assert_called_once_with(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -497,7 +514,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -508,7 +526,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_normal_file_message_mock.assert_called_once_with(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -549,7 +568,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -560,7 +580,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_normal_file_message_mock.assert_called_once_with(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -603,7 +624,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -614,7 +636,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_success_file_message_mock.assert_called_once_with(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             CORRELATION_ID_1,
@@ -653,7 +676,8 @@ class TestReplayer(unittest.TestCase):
             dynamodb_client_mock,
             sqs_client_mock,
             sns_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             CORRELATION_ID_1,
@@ -664,7 +688,8 @@ class TestReplayer(unittest.TestCase):
         )
 
         process_success_file_message_mock.assert_called_once_with(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             CORRELATION_ID_1,
@@ -679,6 +704,7 @@ class TestReplayer(unittest.TestCase):
 
         self.assertTrue(result)
 
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -711,6 +737,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -761,7 +788,8 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
 
         status_checker.process_normal_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -778,7 +806,7 @@ class TestReplayer(unittest.TestCase):
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
@@ -798,7 +826,7 @@ class TestReplayer(unittest.TestCase):
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             RECEIVED_STATUS,
@@ -824,7 +852,7 @@ class TestReplayer(unittest.TestCase):
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
@@ -861,6 +889,17 @@ class TestReplayer(unittest.TestCase):
             value=1,
         )
 
+        update_status_for_product_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_PRODUCT_TABLE_NAME,
+            CORRELATION_ID_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+            TEST_FILE_NAME,
+            RECEIVED_PRODUCT_STATUS_VALUE,
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -893,6 +932,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -942,7 +982,8 @@ class TestReplayer(unittest.TestCase):
         }
 
         status_checker.process_normal_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -959,7 +1000,7 @@ class TestReplayer(unittest.TestCase):
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
@@ -979,7 +1020,7 @@ class TestReplayer(unittest.TestCase):
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             RECEIVED_STATUS,
@@ -1005,7 +1046,7 @@ class TestReplayer(unittest.TestCase):
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
@@ -1021,7 +1062,9 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
+        update_status_for_product_mock.assert_not_called()
 
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1054,6 +1097,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1105,7 +1149,8 @@ class TestReplayer(unittest.TestCase):
         }
 
         status_checker.process_normal_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -1122,7 +1167,7 @@ class TestReplayer(unittest.TestCase):
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
@@ -1142,7 +1187,7 @@ class TestReplayer(unittest.TestCase):
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             RECEIVED_STATUS,
@@ -1168,7 +1213,7 @@ class TestReplayer(unittest.TestCase):
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
@@ -1184,7 +1229,9 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
+        update_status_for_product_mock.assert_not_called()
 
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1217,6 +1264,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1241,7 +1289,8 @@ class TestReplayer(unittest.TestCase):
         }
 
         status_checker.process_normal_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             sqs_client_mock,
@@ -1258,7 +1307,7 @@ class TestReplayer(unittest.TestCase):
 
         update_files_received_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
@@ -1284,7 +1333,9 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
+        update_status_for_product_mock.assert_not_called()
 
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1309,6 +1360,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1343,7 +1395,8 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.return_value = expected_payload_sns
 
         result = status_checker.process_success_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             CORRELATION_ID_1,
@@ -1356,7 +1409,7 @@ class TestReplayer(unittest.TestCase):
 
         get_current_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             TEST_FILE_NAME,
@@ -1373,7 +1426,7 @@ class TestReplayer(unittest.TestCase):
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             SUCCESS_STATUS,
@@ -1382,7 +1435,7 @@ class TestReplayer(unittest.TestCase):
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
@@ -1419,8 +1472,19 @@ class TestReplayer(unittest.TestCase):
             value=1,
         )
 
+        update_status_for_product_mock.assert_called_once_with(
+            dynamodb_client_mock,
+            DDB_PRODUCT_TABLE_NAME,
+            CORRELATION_ID_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+            TEST_FILE_NAME,
+            COMPLETED_PRODUCT_STATUS_VALUE,
+        )
+
         self.assertTrue(result)
 
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1445,6 +1509,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1471,7 +1536,8 @@ class TestReplayer(unittest.TestCase):
         check_completion_status_mock.return_value = False
 
         result = status_checker.process_success_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             CORRELATION_ID_1,
@@ -1484,7 +1550,7 @@ class TestReplayer(unittest.TestCase):
 
         get_current_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             TEST_FILE_NAME,
@@ -1501,7 +1567,7 @@ class TestReplayer(unittest.TestCase):
 
         update_status_for_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             SUCCESS_STATUS,
@@ -1510,7 +1576,7 @@ class TestReplayer(unittest.TestCase):
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
@@ -1526,9 +1592,11 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
+        update_status_for_product_mock.assert_not_called()
 
         self.assertFalse(result)
 
+    @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.send_sns_message")
     @mock.patch(
@@ -1553,6 +1621,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock,
         send_sns_message_mock,
         increment_counter_mock,
+        update_status_for_product_mock,
     ):
         dynamodb_client_mock = mock.MagicMock()
         sqs_client_mock = mock.MagicMock()
@@ -1565,7 +1634,8 @@ class TestReplayer(unittest.TestCase):
         is_collection_success_mock.return_value = False
 
         result = status_checker.process_success_file_message(
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
+            DDB_PRODUCT_TABLE_NAME,
             dynamodb_client_mock,
             sns_client_mock,
             CORRELATION_ID_1,
@@ -1587,7 +1657,7 @@ class TestReplayer(unittest.TestCase):
 
         get_current_collection_mock.assert_called_once_with(
             dynamodb_client_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             TEST_FILE_NAME,
@@ -1599,6 +1669,7 @@ class TestReplayer(unittest.TestCase):
         generate_monitoring_message_payload_mock.assert_not_called()
         send_sns_message_mock.assert_not_called()
         increment_counter_mock.assert_not_called()
+        update_status_for_product_mock.assert_not_called()
 
         self.assertFalse(result)
 
@@ -2281,14 +2352,14 @@ class TestReplayer(unittest.TestCase):
 
         status_checker.get_current_collection(
             dynamodb_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             TEST_FILE_NAME,
         )
 
         dynamodb_mock.get_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME,
+            TableName=DDB_EXPORT_TABLE_NAME,
             Key={
                 "CorrelationId": {"S": CORRELATION_ID_1},
                 "CollectionName": {"S": COLLECTION_1},
@@ -2305,7 +2376,7 @@ class TestReplayer(unittest.TestCase):
 
         status_checker.update_status_for_collection(
             dynamodb_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             SENT_STATUS,
@@ -2313,7 +2384,7 @@ class TestReplayer(unittest.TestCase):
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME,
+            TableName=DDB_EXPORT_TABLE_NAME,
             Key={
                 "CorrelationId": {"S": CORRELATION_ID_1},
                 "CollectionName": {"S": COLLECTION_1},
@@ -2337,7 +2408,7 @@ class TestReplayer(unittest.TestCase):
 
         status_checker.update_files_received_for_collection(
             dynamodb_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             EXPORT_DATE,
@@ -2347,7 +2418,7 @@ class TestReplayer(unittest.TestCase):
         )
 
         dynamodb_mock.update_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME,
+            TableName=DDB_EXPORT_TABLE_NAME,
             Key={
                 "CorrelationId": {"S": CORRELATION_ID_1},
                 "CollectionName": {"S": COLLECTION_1},
@@ -2367,6 +2438,37 @@ class TestReplayer(unittest.TestCase):
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")
+    def test_update_status_for_product_sends_right_message(
+        self,
+        mock_logger,
+    ):
+        dynamodb_mock = mock.MagicMock()
+        dynamodb_mock.update_item = mock.MagicMock()
+
+        counter = mock.MagicMock()
+
+        status_checker.update_status_for_product(
+            dynamodb_mock,
+            DDB_PRODUCT_TABLE_NAME,
+            CORRELATION_ID_1,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+            TEST_FILE_NAME,
+            SUCCESS_STATUS,
+        )
+
+        dynamodb_mock.update_item.assert_called_once_with(
+            TableName=DDB_PRODUCT_TABLE_NAME,
+            Key={
+                "Correlation_Id": {"S": CORRELATION_ID_1},
+                "DataProduct": {"S": "SNAPSHOT_SENDER"},
+            },
+            UpdateExpression="SET Status = :a",
+            ExpressionAttributeValues={":a": {"S": SUCCESS_STATUS}},
+            ReturnValues="ALL_NEW",
+        )
+
+    @mock.patch("status_checker_lambda.status_checker.logger")
     def test_get_single_collection_sends_right_message(
         self,
         mock_logger,
@@ -2376,14 +2478,14 @@ class TestReplayer(unittest.TestCase):
 
         status_checker.get_single_collection_from_dynamodb(
             dynamodb_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             COLLECTION_1,
             TEST_FILE_NAME,
         )
 
         dynamodb_mock.get_item.assert_called_once_with(
-            TableName=DDB_TABLE_NAME,
+            TableName=DDB_EXPORT_TABLE_NAME,
             Key={
                 "CorrelationId": {"S": CORRELATION_ID_1},
                 "CollectionName": {"S": COLLECTION_1},
@@ -2401,13 +2503,13 @@ class TestReplayer(unittest.TestCase):
 
         status_checker.query_dynamodb_for_all_collections(
             dynamodb_mock,
-            DDB_TABLE_NAME,
+            DDB_EXPORT_TABLE_NAME,
             CORRELATION_ID_1,
             TEST_FILE_NAME,
         )
 
         dynamodb_mock.query.assert_called_once_with(
-            TableName=DDB_TABLE_NAME,
+            TableName=DDB_EXPORT_TABLE_NAME,
             KeyConditionExpression=f"{CORRELATION_ID_DDB_FIELD_NAME} = :c",
             ExpressionAttributeValues={":c": {"S": CORRELATION_ID_1}},
             ConsistentRead=True,

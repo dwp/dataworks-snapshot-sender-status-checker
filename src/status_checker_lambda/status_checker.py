@@ -18,6 +18,9 @@ SHUTDOWN_FLAG_FIELD_NAME = "shutdown_flag"
 REPROCESS_FILES_FIELD_NAME = "reprocess_files"
 ATTRIBUTES_FIELD_NAME = "Attributes"
 ITEM_FIELD_NAME = "Item"
+STATUS_PRODUCT_DDB_FIELD_NAME = "Status"
+CORRELATION_ID_PRODUCT_DDB_FIELD_NAME = "Correlation_Id"
+DATA_PRODUCT_DDB_FIELD_NAME = "DataProduct"
 CORRELATION_ID_DDB_FIELD_NAME = "CorrelationId"
 COLLECTION_NAME_DDB_FIELD_NAME = "CollectionName"
 COLLECTION_STATUS_DDB_FIELD_NAME = "CollectionStatus"
@@ -29,6 +32,10 @@ EXPORTED_STATUS_VALUE = "Exported"
 SENT_STATUS_VALUE = "Sent"
 RECEIVED_STATUS_VALUE = "Received"
 SUCCESS_STATUS_VALUE = "Success"
+RECEIVED_PRODUCT_STATUS_VALUE = "RECEIVED"
+COMPLETED_PRODUCT_STATUS_VALUE = "COMPLETED"
+
+DATA_PRODUCT = "SNAPSHOT_SENDER"
 
 log_level = os.environ["LOG_LEVEL"] if "LOG_LEVEL" in os.environ else "INFO"
 required_message_keys = [
@@ -176,6 +183,11 @@ def get_parameters():
     if "DYNAMO_DB_EXPORT_STATUS_TABLE_NAME" in os.environ:
         _args.dynamo_db_export_status_table_name = os.environ[
             "DYNAMO_DB_EXPORT_STATUS_TABLE_NAME"
+        ]
+
+    if "DYNAMO_DB_PRODUCT_STATUS_TABLE_NAME" in os.environ:
+        _args.dynamo_db_product_status_table_name = os.environ[
+            "DYNAMO_DB_PRODUCT_STATUS_TABLE_NAME"
         ]
 
     if "MONITORING_SNS_TOPIC_ARN" in os.environ:
@@ -625,6 +637,52 @@ def update_files_received_for_collection(
     return response[ATTRIBUTES_FIELD_NAME]
 
 
+def update_status_for_product(
+    dynamodb_client,
+    ddb_product_table,
+    correlation_id,
+    export_date,
+    snapshot_type,
+    file_name,
+    status,
+):
+    """Updates the status for the product in dynamodb for the given correlation id.
+
+    Arguments:
+        dynamodb_client (client): The boto3 client for Dynamodb
+        ddb_product_table (string): The name of the Dynamodb status table
+        correlation_id (string): String value of CorrelationId column
+        export_date (string): The date of the export
+        snapshot_type (string): Will be full or incremental
+        file_name (string): file name for logging purposes
+        status (string): The status to update with
+    """
+    logger.info(
+        f'Updating product status in dynamodb", "ddb_product_table": "{ddb_product_table}", "correlation_id": '
+        + f'"{correlation_id}", "file_name": "{file_name}", "status": "{status}", '
+        + f'"snapshot_type": "{snapshot_type}",  "export_date": "{export_date}"'
+    )
+
+    response = dynamodb_client.update_item(
+        TableName=ddb_product_table,
+        Key={
+            CORRELATION_ID_PRODUCT_DDB_FIELD_NAME: {"S": correlation_id},
+            DATA_PRODUCT_DDB_FIELD_NAME: {"S": DATA_PRODUCT},
+        },
+        UpdateExpression=f"SET {STATUS_PRODUCT_DDB_FIELD_NAME} = :a",
+        ExpressionAttributeValues={":a": {"S": status}},
+        ReturnValues="ALL_NEW",
+    )
+
+    logger.info(
+        f'Updated product status in dynamodb", "ddb_product_table": "{ddb_product_table}", "correlation_id": '
+        + f'"{correlation_id}", "status": "{status}", "response": "{response}", "file_name": "{file_name}", '
+        + f'"snapshot_type": "{snapshot_type}",  "export_date": "{export_date}"'
+    )
+
+    return response[ATTRIBUTES_FIELD_NAME]
+
+
 def increment_counter(
     counter,
     correlation_id,
@@ -956,7 +1014,8 @@ def extract_messages(
 
 
 def process_success_file_message(
-    ddb_table,
+    ddb_export_table,
+    ddb_product_table,
     dynamodb_client,
     sns_client,
     correlation_id,
@@ -969,7 +1028,8 @@ def process_success_file_message(
     """Processes an individual success files message and returns true if all collections successful.
 
     Arguments:
-        ddb_table (string): The ddb table name
+        ddb_export_table (string): The ddb export table name
+        ddb_product_table (string): The ddb product table name
         dynamodb_client (object): The boto3 client for dynamo db
         sns_client (object): The boto3 client for sns
         correlation_id (string): String value of CorrelationId column
@@ -988,7 +1048,7 @@ def process_success_file_message(
 
     current_collection = get_current_collection(
         dynamodb_client,
-        ddb_table,
+        ddb_export_table,
         correlation_id,
         collection_name,
         file_name,
@@ -1006,7 +1066,7 @@ def process_success_file_message(
     if success_result:
         update_status_for_collection(
             dynamodb_client,
-            ddb_table,
+            ddb_export_table,
             correlation_id,
             collection_name,
             SUCCESS_STATUS_VALUE,
@@ -1015,7 +1075,7 @@ def process_success_file_message(
 
         all_statuses = query_dynamodb_for_all_collections(
             dynamodb_client,
-            ddb_table,
+            ddb_export_table,
             correlation_id,
             file_name,
         )
@@ -1051,6 +1111,16 @@ def process_success_file_message(
                 value=1,
             )
 
+            update_status_for_product(
+                dynamodb_client,
+                ddb_product_table,
+                correlation_id,
+                export_date,
+                snapshot_type,
+                file_name,
+                COMPLETED_PRODUCT_STATUS_VALUE,
+            )
+
             return True
         else:
             logger.info(
@@ -1069,7 +1139,8 @@ def process_success_file_message(
 
 
 def process_normal_file_message(
-    ddb_table,
+    ddb_export_table,
+    ddb_product_table,
     dynamodb_client,
     sns_client,
     sqs_client,
@@ -1086,7 +1157,8 @@ def process_normal_file_message(
     """Processes an individual normal files message (not a success file).
 
     Arguments:
-        ddb_table (string): The ddb table name
+        ddb_export_table (string): The ddb export table name
+        ddb_product_table (string): The ddb product table name
         dynamodb_client (object): The boto3 client for dynamo db
         sns_client (object): The boto3 client for sns
         sqs_client (object): The boto3 client for sqs
@@ -1109,7 +1181,7 @@ def process_normal_file_message(
 
     updated_collection = update_files_received_for_collection(
         dynamodb_client,
-        ddb_table,
+        ddb_export_table,
         correlation_id,
         collection_name,
         export_date,
@@ -1130,7 +1202,7 @@ def process_normal_file_message(
     if received_result:
         update_status_for_collection(
             dynamodb_client,
-            ddb_table,
+            ddb_export_table,
             correlation_id,
             collection_name,
             RECEIVED_STATUS_VALUE,
@@ -1156,7 +1228,7 @@ def process_normal_file_message(
 
         all_statuses = query_dynamodb_for_all_collections(
             dynamodb_client,
-            ddb_table,
+            ddb_export_table,
             correlation_id,
             file_name,
         )
@@ -1191,6 +1263,16 @@ def process_normal_file_message(
                 snapshot_type,
                 value=1,
             )
+
+            update_status_for_product(
+                dynamodb_client,
+                ddb_product_table,
+                correlation_id,
+                export_date,
+                snapshot_type,
+                file_name,
+                RECEIVED_PRODUCT_STATUS_VALUE,
+            )
         else:
             logger.info(
                 'All collections have not been fully received so no further processing", '
@@ -1211,7 +1293,8 @@ def process_message(
     dynamodb_client,
     sqs_client,
     sns_client,
-    ddb_table,
+    ddb_export_table,
+    ddb_product_table,
     sns_topic_arn,
     sqs_queue_url,
     correlation_id,
@@ -1227,7 +1310,8 @@ def process_message(
         dynamodb_client (object): The boto3 client for dynamo db
         sqs_client (object): The boto3 client for sqs
         sns_client (object): The boto3 client for sns
-        ddb_table (string): The ddb table name
+        ddb_export_table (string): The export ddb table name
+        ddb_product_table (string): The product ddb table name
         sns_topic_arn (string): The arn of the SNS topic to send to
         sqs_queue_url (string): The url of the SQS queue to send to
         correlation_id (string): String value of CorrelationId column
@@ -1265,7 +1349,8 @@ def process_message(
 
     if is_success_file:
         result = process_success_file_message(
-            ddb_table,
+            ddb_export_table,
+            ddb_product_table,
             dynamodb_client,
             sns_client,
             correlation_id,
@@ -1277,7 +1362,8 @@ def process_message(
         )
     else:
         process_normal_file_message(
-            ddb_table,
+            ddb_export_table,
+            ddb_product_table,
             dynamodb_client,
             sns_client,
             sqs_client,
@@ -1300,7 +1386,8 @@ def handle_message(
     dynamodb_client,
     sqs_client,
     sns_client,
-    ddb_table,
+    ddb_export_table,
+    ddb_product_table,
     sns_topic_arn,
     sqs_queue_url,
     pushgateway_host,
@@ -1313,7 +1400,8 @@ def handle_message(
         dynamodb_client (object): The boto3 client for dynamo db
         sqs_client (object): The boto3 client for sqs
         sns_client (object): The boto3 client for sns
-        ddb_table (string): The ddb table name
+        ddb_export_table (string): The ddb export status table name
+        ddb_product_table (string): The ddb product table name
         sns_topic_arn (string): The arn of the SNS topic to send to
         sqs_queue_url (string): The url of the SQS queue to send to
         pushgateway_host (string): The host name of the push gateway
@@ -1344,7 +1432,8 @@ def handle_message(
             dynamodb_client,
             sqs_client,
             sns_client,
-            ddb_table,
+            ddb_export_table,
+            ddb_product_table,
             sns_topic_arn,
             sqs_queue_url,
             correlation_id,
@@ -1395,6 +1484,7 @@ def handler(event, context):
             sqs_client,
             sns_client,
             args.dynamo_db_export_status_table_name,
+            args.dynamo_db_product_status_table_name,
             args.monitoring_sns_topic_arn,
             args.export_state_sqs_queue_url,
             args.pushgateway_hostname,

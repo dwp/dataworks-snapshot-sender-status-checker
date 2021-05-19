@@ -31,7 +31,7 @@ If the `is_success_file` field is passed in as `true` then the flow is different
 If it passes the check above, then the following will also be performed:
 
 1. It will check if *all* collections for the given correlation id are in a state of `SUCCESS`
-1. If they are, then it will post to `MONITORING_SNS_TOPIC_ARN` with a message for monitoring to say all collections have been successful
+1. If they are, then it will post to `MONITORING_SNS_TOPIC_ARN` with a message for monitoring to say all collections have been successful and update the dynamodb product table named `DYNAMO_DB_PRODUCT_STATUS_TABLE_NAME`with a status of `COMPLETED`
 
 
 ## SQS message example
@@ -85,6 +85,7 @@ If the above format is used, then you can have as many records as you like as th
 |APPLICATION| snapshot-sender-status-checker |The name of the application|No|
 |LOG_LEVEL| INFO |The logging level of the Lambda|No|
 |DYNAMO_DB_EXPORT_STATUS_TABLE_NAME|UCExportToCrownStatus|The name of the DynamoDB table used for export statuses|No|
+|DYNAMO_DB_PRODUCT_STATUS_TABLE_NAME|data_pipeline_metadata|The name of the DynamoDB used for product statuses|No|
 |MONITORING_SNS_TOPIC_ARN|The arn of the sns topic to send monitoring messages to|Yes|
 |EXPORT_STATE_SQS_QUEUE_URL|The sqs queue url for the export state snapshot sender messages|Yes|
 
