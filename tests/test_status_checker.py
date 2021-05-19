@@ -2445,8 +2445,6 @@ class TestReplayer(unittest.TestCase):
         dynamodb_mock = mock.MagicMock()
         dynamodb_mock.update_item = mock.MagicMock()
 
-        counter = mock.MagicMock()
-
         status_checker.update_status_for_product(
             dynamodb_mock,
             DDB_PRODUCT_TABLE_NAME,
