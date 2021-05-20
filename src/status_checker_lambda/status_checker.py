@@ -669,7 +669,7 @@ def update_status_for_product(
             CORRELATION_ID_PRODUCT_DDB_FIELD_NAME: {"S": correlation_id},
             DATA_PRODUCT_DDB_FIELD_NAME: {"S": DATA_PRODUCT},
         },
-        UpdateExpression=f"SET #a = :b",
+        UpdateExpression="SET #a = :b",
         ExpressionAttributeNames={"#a": STATUS_PRODUCT_DDB_FIELD_NAME},
         ExpressionAttributeValues={":b": {"S": status}},
         ReturnValues="ALL_NEW",
