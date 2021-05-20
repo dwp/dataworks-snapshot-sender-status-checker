@@ -2461,8 +2461,9 @@ class TestReplayer(unittest.TestCase):
                 "Correlation_Id": {"S": CORRELATION_ID_1},
                 "DataProduct": {"S": "SNAPSHOT_SENDER"},
             },
-            UpdateExpression="SET Status = :a",
-            ExpressionAttributeValues={":a": {"S": SUCCESS_STATUS}},
+            UpdateExpression="SET #a = :b",
+            ExpressionAttributeNames={"#a": "Status"},
+            ExpressionAttributeValues={":b": {"S": SUCCESS_STATUS}},
             ReturnValues="ALL_NEW",
         )
 
