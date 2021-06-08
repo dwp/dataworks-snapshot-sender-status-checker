@@ -1241,21 +1241,6 @@ def process_normal_file_message(
             collection_name,
             file_name,
         ):
-            sns_payload = generate_monitoring_message_payload(
-                snapshot_type,
-                "All collections received by NiFi",
-                export_date,
-                correlation_id,
-                file_name,
-            )
-
-            send_sns_message(
-                sns_client,
-                sns_payload,
-                sns_topic_arn,
-                file_name,
-            )
-
             increment_counter(
                 COUNTER_ALL_COLLECTIONS_RECEIVED,
                 correlation_id,
