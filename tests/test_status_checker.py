@@ -865,21 +865,6 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
         )
 
-        generate_monitoring_message_payload_mock.assert_called_once_with(
-            SNAPSHOT_TYPE,
-            "All collections received by NiFi",
-            EXPORT_DATE,
-            CORRELATION_ID_1,
-            TEST_FILE_NAME,
-        )
-
-        send_sns_message_mock.assert_called_once_with(
-            sns_client_mock,
-            expected_payload_sns,
-            SNS_TOPIC_ARN,
-            TEST_FILE_NAME,
-        )
-
         increment_counter_mock.assert_called_once_with(
             mock.ANY,
             CORRELATION_ID_1,
@@ -898,6 +883,9 @@ class TestReplayer(unittest.TestCase):
             TEST_FILE_NAME,
             RECEIVED_PRODUCT_STATUS_VALUE,
         )
+
+        generate_monitoring_message_payload_mock.assert_not_called()
+        send_sns_message_mock.assert_not_called()
 
     @mock.patch("status_checker_lambda.status_checker.update_status_for_product")
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
