@@ -2141,13 +2141,12 @@ class TestReplayer(unittest.TestCase):
 
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_is_collection_received_returns_false_when_more_files_received(
+    def test_is_collection_received_returns_true_when_more_files_received(
         self,
         mock_logger,
         increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
@@ -2166,10 +2165,15 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        increment_counter_mock.assert_not_called()
-        counter.inc.assert_not_called()
+        increment_counter_mock.assert_called_once_with(
+            counter,
+            CORRELATION_ID_1,
+            None,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+        )
 
-        self.assertFalse(actual)
+        self.assertTrue(actual)
 
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
