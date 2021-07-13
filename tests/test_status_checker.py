@@ -2147,7 +2147,6 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock,
     ):
         counter = mock.MagicMock()
-        counter.inc = mock.MagicMock()
 
         event = {
             "CollectionStatus": {"S": SENT_STATUS},
@@ -2166,8 +2165,13 @@ class TestReplayer(unittest.TestCase):
             counter,
         )
 
-        increment_counter_mock.assert_not_called()
-        counter.inc.assert_not_called()
+        increment_counter_mock.assert_called_once_with(
+            counter,
+            CORRELATION_ID_1,
+            None,
+            EXPORT_DATE,
+            SNAPSHOT_TYPE,
+        )
 
         self.assertTrue(actual)
 
