@@ -2141,7 +2141,7 @@ class TestReplayer(unittest.TestCase):
 
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
-    def test_is_collection_received_returns_false_when_more_files_received(
+    def test_is_collection_received_returns_true_when_more_files_received(
         self,
         mock_logger,
         increment_counter_mock,
@@ -2169,7 +2169,7 @@ class TestReplayer(unittest.TestCase):
         increment_counter_mock.assert_not_called()
         counter.inc.assert_not_called()
 
-        self.assertFalse(actual)
+        self.assertTrue(actual)
 
     @mock.patch("status_checker_lambda.status_checker.increment_counter")
     @mock.patch("status_checker_lambda.status_checker.logger")
