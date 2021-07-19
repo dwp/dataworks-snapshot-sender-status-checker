@@ -120,6 +120,7 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            MESSAGE_GROUP_ID,
         )
         handle_message_mock.assert_any_call(
             {"test2": "test_value2"},
