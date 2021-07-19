@@ -44,6 +44,7 @@ METRICS_JOB_NAME = "snapshot_sender_status_checker"
 GROUPING_KEY = {"test": "test_key"}
 RECEIVED_PRODUCT_STATUS_VALUE = "RECEIVED"
 COMPLETED_PRODUCT_STATUS_VALUE = "COMPLETED"
+MESSAGE_GROUP_ID = "message_group"
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_EXPORT_TABLE_NAME
@@ -52,6 +53,7 @@ args.monitoring_sns_topic_arn = SNS_TOPIC_ARN
 args.export_state_sqs_queue_url = SQS_QUEUE_URL
 args.pushgateway_hostname = PUSHGATEWAY_HOSTNAME
 args.pushgateway_port = PUSHGATEWAY_PORT
+args.sqs_message_group_id = MESSAGE_GROUP_ID
 args.log_level = "INFO"
 
 
@@ -118,6 +120,7 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            MESSAGE_GROUP_ID,
         )
         handle_message_mock.assert_any_call(
             {"test2": "test_value2"},
@@ -130,6 +133,7 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            MESSAGE_GROUP_ID,
         )
 
     @mock.patch("status_checker_lambda.status_checker.delete_metrics")
@@ -171,6 +175,7 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            MESSAGE_GROUP_ID,
         )
 
         process_message_mock.assert_called_once_with(
@@ -187,6 +192,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         push_metrics_mock.assert_called_once_with(
@@ -238,6 +244,7 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            MESSAGE_GROUP_ID,
         )
 
         process_message_mock.assert_called_once_with(
@@ -254,6 +261,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         push_metrics_mock.assert_called_once_with(
@@ -314,6 +322,7 @@ class TestReplayer(unittest.TestCase):
                 SQS_QUEUE_URL,
                 PUSHGATEWAY_HOSTNAME,
                 PUSHGATEWAY_PORT,
+                MESSAGE_GROUP_ID,
             )
 
         process_message_mock.assert_called_once_with(
@@ -330,6 +339,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         push_metrics_mock.assert_called_once_with(
@@ -380,6 +390,7 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
+            MESSAGE_GROUP_ID,
         )
 
         process_message_mock.assert_not_called()
@@ -415,6 +426,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_normal_file_message_mock.assert_called_once_with(
@@ -432,6 +444,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -469,6 +482,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_normal_file_message_mock.assert_called_once_with(
@@ -486,6 +500,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -523,6 +538,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_normal_file_message_mock.assert_called_once_with(
@@ -540,6 +556,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -577,6 +594,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_normal_file_message_mock.assert_called_once_with(
@@ -594,6 +612,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_success_file_message_mock.assert_not_called()
@@ -633,6 +652,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_success_file_message_mock.assert_called_once_with(
@@ -685,6 +705,7 @@ class TestReplayer(unittest.TestCase):
             SNAPSHOT_TYPE,
             EXPORT_DATE,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         process_success_file_message_mock.assert_called_once_with(
@@ -802,6 +823,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -848,6 +870,7 @@ class TestReplayer(unittest.TestCase):
             expected_payload_sqs,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
@@ -984,6 +1007,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -1030,6 +1054,7 @@ class TestReplayer(unittest.TestCase):
             expected_payload_sqs,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
@@ -1151,6 +1176,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -1197,6 +1223,7 @@ class TestReplayer(unittest.TestCase):
             expected_payload_sqs,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         query_dynamodb_for_all_collections_mock.assert_called_once_with(
@@ -1291,6 +1318,7 @@ class TestReplayer(unittest.TestCase):
             SNS_TOPIC_ARN,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         update_files_received_for_collection_mock.assert_called_once_with(
@@ -2521,10 +2549,13 @@ class TestReplayer(unittest.TestCase):
             payload,
             SQS_QUEUE_URL,
             TEST_FILE_NAME,
+            MESSAGE_GROUP_ID,
         )
 
         sqs_mock.send_message.assert_called_once_with(
-            QueueUrl=SQS_QUEUE_URL, MessageBody='{"test_key": "test_value"}'
+            QueueUrl=SQS_QUEUE_URL,
+            MessageBody='{"test_key": "test_value"}',
+            MessageGroupId=MESSAGE_GROUP_ID,
         )
 
     @mock.patch("status_checker_lambda.status_checker.logger")

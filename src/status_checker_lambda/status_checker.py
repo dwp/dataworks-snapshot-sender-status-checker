@@ -196,6 +196,11 @@ def get_parameters():
     if "EXPORT_STATE_SQS_QUEUE_URL" in os.environ:
         _args.export_state_sqs_queue_url = os.environ["EXPORT_STATE_SQS_QUEUE_URL"]
 
+    if "SQS_MESSAGE_GROUP_ID" in os.environ:
+        _args.sqs_message_group_id = os.environ["SQS_MESSAGE_GROUP_ID"]
+    else:
+        _args.sqs_message_group_id = "daily_export"
+
     required_args = ["monitoring_sns_topic_arn", "export_state_sqs_queue_url"]
     missing_args = []
     for required_message_key in required_args:
@@ -443,6 +448,7 @@ def send_sqs_message(
     payload,
     sqs_queue_url,
     file_name,
+    message_group_id,
 ):
     """Publishes the message to sqs.
 
@@ -458,10 +464,14 @@ def send_sqs_message(
     dumped_payload = get_escaped_json_string(payload)
     logger.info(
         f'Publishing payload to SQS", "payload": {dumped_payload}, "sqs_queue_url": "{sqs_queue_url}", '
-        + f'"file_name": "{file_name}'
+        + f'"message_group_id": "{message_group_id}", "file_name": "{file_name}'
     )
 
-    return sqs_client.send_message(QueueUrl=sqs_queue_url, MessageBody=json_message)
+    return sqs_client.send_message(
+        QueueUrl=sqs_queue_url,
+        MessageBody=json_message,
+        MessageGroupId=message_group_id,
+    )
 
 
 def check_completion_status(
@@ -1154,6 +1164,7 @@ def process_normal_file_message(
     sns_topic_arn,
     sqs_queue_url,
     file_name,
+    message_group_id,
 ):
     """Processes an individual normal files message (not a success file).
 
@@ -1172,12 +1183,13 @@ def process_normal_file_message(
         sns_topic_arn (string): The arn of the SNS topic to send to
         sqs_queue_url (string): The url of the SQS queue to send to
         file_name (string): For logging purposes
+        message_group_id (string): SQS message group id
     """
     logger.info(
         f'Processing normal file message", "file_name": "{file_name}", '
         + f'"correlation_id": "{correlation_id}", "snapshot_type": "{snapshot_type}", '
         + f'"collection_name": "{collection_name}", "export_date": "{export_date}", '
-        + f'"file_name": "{file_name}'
+        + f'"message_group_id": "{message_group_id}", "file_name": "{file_name}'
     )
 
     updated_collection = update_files_received_for_collection(
@@ -1225,6 +1237,7 @@ def process_normal_file_message(
             sqs_payload,
             sqs_queue_url,
             file_name,
+            message_group_id,
         )
 
         all_statuses = query_dynamodb_for_all_collections(
@@ -1288,6 +1301,7 @@ def process_message(
     snapshot_type,
     export_date,
     file_name,
+    message_group_id,
 ):
     """Processes an individual message.
 
@@ -1305,6 +1319,7 @@ def process_message(
         snapshot_type (string): Full or incremental
         export_date (string): The export date
         file_name (string): For logging purposes
+        message_group_id (string): SQS message group id
     """
     result = False
 
@@ -1312,7 +1327,7 @@ def process_message(
     logger.info(
         f'Processing new message", "message": "{dumped_message}", "file_name": "{file_name}", '
         + f'"correlation_id": "{correlation_id}", "export_date": "{export_date}", "snapshot_type": "{snapshot_type}", '
-        + f'"collection_name": "{collection_name}", "file_name": "{file_name}'
+        + f'"collection_name": "{collection_name}", "message_group_id": "{message_group_id}", "file_name": "{file_name}'
     )
 
     is_success_file = (
@@ -1362,6 +1377,7 @@ def process_message(
             sns_topic_arn,
             sqs_queue_url,
             file_name,
+            message_group_id,
         )
 
     return result
@@ -1378,6 +1394,7 @@ def handle_message(
     sqs_queue_url,
     pushgateway_host,
     pushgateway_port,
+    message_group_id,
 ):
     """Handles an individual message.
 
@@ -1392,6 +1409,7 @@ def handle_message(
         sqs_queue_url (string): The url of the SQS queue to send to
         pushgateway_host (string): The host name of the push gateway
         pushgateway_port (string): The port of the push gateway
+        message_group_id (string): SQS message group id
     """
     dumped_message = get_escaped_json_string(message)
     logger.info(f'Handling new message", "message": "{dumped_message}"')
@@ -1427,6 +1445,7 @@ def handle_message(
             snapshot_type,
             export_date,
             file_name,
+            message_group_id,
         )
     finally:
         push_metrics(
@@ -1475,6 +1494,7 @@ def handler(event, context):
             args.export_state_sqs_queue_url,
             args.pushgateway_hostname,
             args.pushgateway_port,
+            args.sqs_message_group_id,
         )
 
 
