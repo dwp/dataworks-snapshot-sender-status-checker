@@ -15,8 +15,8 @@ EXPORTED_STATUS = "Exported"
 SENT_STATUS = "Sent"
 RECEIVED_STATUS = "Received"
 SUCCESS_STATUS = "Success"
-COLLECTION_1 = "collection1"
-COLLECTION_2 = "collection2"
+COLLECTION_1 = "db.collection1"
+COLLECTION_2 = "db.collection2"
 CORRELATION_ID_1 = "correlationId1"
 CORRELATION_ID_FIELD_NAME = "correlation_id"
 COLLECTION_NAME_FIELD_NAME = "collection_name"
@@ -44,7 +44,7 @@ METRICS_JOB_NAME = "snapshot_sender_status_checker"
 GROUPING_KEY = {"test": "test_key"}
 RECEIVED_PRODUCT_STATUS_VALUE = "RECEIVED"
 COMPLETED_PRODUCT_STATUS_VALUE = "COMPLETED"
-MESSAGE_GROUP_ID = "message_group"
+MESSAGE_GROUP_ID = "db_collection1"
 
 args = argparse.Namespace()
 args.dynamo_db_export_status_table_name = DDB_EXPORT_TABLE_NAME
@@ -53,7 +53,6 @@ args.monitoring_sns_topic_arn = SNS_TOPIC_ARN
 args.export_state_sqs_queue_url = SQS_QUEUE_URL
 args.pushgateway_hostname = PUSHGATEWAY_HOSTNAME
 args.pushgateway_port = PUSHGATEWAY_PORT
-args.sqs_message_group_id = MESSAGE_GROUP_ID
 args.log_level = "INFO"
 
 
@@ -120,7 +119,6 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
-            MESSAGE_GROUP_ID,
         )
         handle_message_mock.assert_any_call(
             {"test2": "test_value2"},
@@ -133,7 +131,6 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
-            MESSAGE_GROUP_ID,
         )
 
     @mock.patch("status_checker_lambda.status_checker.delete_metrics")
@@ -175,7 +172,6 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
-            MESSAGE_GROUP_ID,
         )
 
         process_message_mock.assert_called_once_with(
@@ -244,7 +240,6 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
-            MESSAGE_GROUP_ID,
         )
 
         process_message_mock.assert_called_once_with(
@@ -322,7 +317,6 @@ class TestReplayer(unittest.TestCase):
                 SQS_QUEUE_URL,
                 PUSHGATEWAY_HOSTNAME,
                 PUSHGATEWAY_PORT,
-                MESSAGE_GROUP_ID,
             )
 
         process_message_mock.assert_called_once_with(
@@ -390,7 +384,6 @@ class TestReplayer(unittest.TestCase):
             SQS_QUEUE_URL,
             PUSHGATEWAY_HOSTNAME,
             PUSHGATEWAY_PORT,
-            MESSAGE_GROUP_ID,
         )
 
         process_message_mock.assert_not_called()

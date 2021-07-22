@@ -196,11 +196,6 @@ def get_parameters():
     if "EXPORT_STATE_SQS_QUEUE_URL" in os.environ:
         _args.export_state_sqs_queue_url = os.environ["EXPORT_STATE_SQS_QUEUE_URL"]
 
-    if "SQS_MESSAGE_GROUP_ID" in os.environ:
-        _args.sqs_message_group_id = os.environ["SQS_MESSAGE_GROUP_ID"]
-    else:
-        _args.sqs_message_group_id = "daily_export"
-
     required_args = ["monitoring_sns_topic_arn", "export_state_sqs_queue_url"]
     missing_args = []
     for required_message_key in required_args:
@@ -1396,7 +1391,6 @@ def handle_message(
     sqs_queue_url,
     pushgateway_host,
     pushgateway_port,
-    message_group_id,
 ):
     """Handles an individual message.
 
@@ -1411,7 +1405,6 @@ def handle_message(
         sqs_queue_url (string): The url of the SQS queue to send to
         pushgateway_host (string): The host name of the push gateway
         pushgateway_port (string): The port of the push gateway
-        message_group_id (string): SQS message group id
     """
     dumped_message = get_escaped_json_string(message)
     logger.info(f'Handling new message", "message": "{dumped_message}"')
@@ -1423,6 +1416,7 @@ def handle_message(
     correlation_id = message[CORRELATION_ID_FIELD_NAME]
     snapshot_type = message[SNAPSHOT_TYPE_FIELD_NAME]
     export_date = message[EXPORT_DATE_FIELD_NAME]
+    message_group_id = collection_name.replace(".", "_")
 
     file_name = (
         message[FILE_NAME_FIELD_NAME]
@@ -1496,7 +1490,6 @@ def handler(event, context):
             args.export_state_sqs_queue_url,
             args.pushgateway_hostname,
             args.pushgateway_port,
-            args.sqs_message_group_id,
         )
 
 
