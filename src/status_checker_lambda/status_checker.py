@@ -882,7 +882,11 @@ def is_collection_received(
     )
 
     is_received = (
-        collection_status in [EXPORTED_STATUS_VALUE, SENT_STATUS_VALUE]
+        collection_status
+        in [
+            EXPORTED_STATUS_VALUE,
+            SENT_STATUS_VALUE,
+        ]
         and int(collection_files_received_count) >= int(collection_files_exported_count)
     )
 
