@@ -14,11 +14,14 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install Black
-        run: pip install black
-
       - name: Install Tox
         run: pip install tox
+
+      - name: unit-tests
+        run: make unittest
+
+      - name: Install Black
+        run: pip install black
 
       - name: Run black --check .
         id: check-formatting
@@ -35,6 +38,3 @@ jobs:
           git checkout $GITHUB_HEAD_REF
           git commit -am "Fixup: Format Python code with Black"
           git push
-
-      - name: unit-tests
-        run: make unittest
