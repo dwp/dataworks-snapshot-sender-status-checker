@@ -881,14 +881,10 @@ def is_collection_received(
         + f'"file_name": "{file_name}'
     )
 
-    is_received = (
-        collection_status
-        in [
-            EXPORTED_STATUS_VALUE,
-            SENT_STATUS_VALUE,
-        ]
-        and int(collection_files_received_count) >= int(collection_files_exported_count)
-    )
+    is_received = collection_status in [
+        EXPORTED_STATUS_VALUE,
+        SENT_STATUS_VALUE,
+    ] and int(collection_files_received_count) >= int(collection_files_exported_count)
 
     logger.info(
         f'Checked if collection has been received", "is_received": "{is_received}", "collection_status": '
