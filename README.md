@@ -1,3 +1,5 @@
+# DO NOT USE THIS REPO - MIGRATED TO GITLAB
+
 # dataworks-snapshot-sender-status-checker
 
 ## An AWS lambda which receives SQS messages and monitors and reports on the status of a snapshot sender run.
